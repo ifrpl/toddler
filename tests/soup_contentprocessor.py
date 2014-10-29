@@ -33,6 +33,20 @@ class SoupContentProcessorTest(unittest.TestCase):
                 </div>
                 <img class='someImage' src="/test.png"/>
             </div>
+            <table>
+                <tr>
+                    <td class="f1">123</td>
+                    <td>junk</td>
+                </tr>
+                <tr>
+                    <td class="f2">456</td>
+                    <td>junk</td>
+                </tr>
+                <tr>
+                    <td class="f3">789</td>
+                    <td>junk</td>
+                </tr>
+            </table>
         </body>
         """
 
@@ -48,7 +62,7 @@ class SoupContentProcessorTest(unittest.TestCase):
                         "arguments": ["p"]
                     },
                     {
-                        "property": "text"
+                        "command": "text"
                     }
                 ],
                 "feature_2": [
@@ -57,7 +71,7 @@ class SoupContentProcessorTest(unittest.TestCase):
                         "arguments": ["div#content p:nth-of-type(2) span"]
                     },
                     {
-                        "property": "text"
+                        "command": "text"
                     }
                 ],
                 "feature_3": [
@@ -74,7 +88,52 @@ class SoupContentProcessorTest(unittest.TestCase):
                         "arguments": "span"
                     },
                     {
-                        "property": "text"
+                        "command": "text"
+                    }
+                ],
+                "og_title": [
+                    {
+                        "command": "find",
+                        "arguments": "meta",
+                        "kw_arguments": {"property": "og:title"}
+                    },
+                    {
+                        "command": "get_attribute",
+                        "arguments": "content"
+                    }
+                ],
+                "table": [
+                    {
+                        "command": "join",
+                        "arguments": [
+                            [
+                                {
+                                    "command": "select",
+                                    "arguments": "td.f1"
+                                },
+                                {
+                                    "command": "text"
+                                }
+                            ],
+                            [
+                                {
+                                    "command": "select",
+                                    "arguments": "td.f3"
+                                },
+                                {
+                                    "command": "text"
+                                }
+                            ],
+                            [
+                                {
+                                    "command": "select",
+                                    "arguments": "td.f2"
+                                },
+                                {
+                                    "command": "text"
+                                }
+                            ]
+                        ]
                     }
                 ]
             }
@@ -86,6 +145,7 @@ class SoupContentProcessorTest(unittest.TestCase):
         self.assertEqual(len(doc.content['feature_1']), 2)
         self.assertEqual(doc.content['feature_2'][0], "Value2")
         self.assertEqual(doc.content['feature_3'][0], "Value3")
+        self.assertEqual(doc.content['og_title'][0], "open graph title")
 
-
+        self.assertEqual(doc.content['table'][1], "789")
 
