@@ -1,5 +1,8 @@
 __author__ = 'michal'
 
+import json
+
+
 class Document(object):
     """
          {
@@ -22,6 +25,24 @@ class Document(object):
 
         if source_dict is not None:
             self.load(source_dict)
+
+    def toJSON(self, fp=None):
+
+        d = {}
+        d['url'] = self.url
+        d['meta'] = self.meta
+        d['body'] = self.body
+        d['content'] = self.content
+        d['features'] = self.features
+
+        if fp is not None:
+            json.dump(fp)
+            return True
+        else:
+            return json.dumps(d)
+
+    def __str__(self):
+        return self.toJSON()
 
     def load(self, source_dict):
 
