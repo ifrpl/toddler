@@ -1,11 +1,12 @@
 __author__ = 'michal'
 
 import asyncio
+from toddler import Document
 
 
 class Connector(object):
 
-    def __init__(self, options, *args, **kwargs):
+    def __init__(self, document: Document, options, *args, **kwargs):
         """
 
         :param options:
@@ -15,6 +16,7 @@ class Connector(object):
         """
 
         self.options = options
+        self.document = document
 
     @asyncio.coroutine
     def work(self):

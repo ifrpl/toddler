@@ -83,6 +83,5 @@ class SoupContentProcessor(BaseContentProcessor):
         return soup.parent
 
     def get_stream(self, document: Document):
-
         return BeautifulSoup(document.body)
 

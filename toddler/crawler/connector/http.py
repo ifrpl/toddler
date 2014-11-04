@@ -7,16 +7,25 @@ from aiohttp.client import ClientResponse
 import dateutil.parser
 from wsgiref.handlers import format_date_time
 from time import mktime
+from toddler.contentprocessors import parse_document
+import copy
+from functools import reduce
+
+from toddler import Document
 
 USER_AGENT = "Toddler 0.1 Crawling tool"
 
 class HttpConnector(Connector):
 
-    def __init__(self, options, *args, **kwargs):
+    def __init__(self, document: Document, options, *args, **kwargs):
         """
 
         :param options:
+        {
+            "contentExtractionConfig": []
+        }
 
+        Document
          {
             "url": "http(s)://example.com",
             "meta": {
@@ -32,12 +41,14 @@ class HttpConnector(Connector):
         :param kwargs:
         :return:
         """
+
+        super(HttpConnector, self).__init__(document, options, *args, **kwargs)
+
         self.connection = None
         """:type: asyncio.coroutine"""
-        self.url = urlsplit(options['url'])
+        self.url = urlsplit(document.url)
         """:type: SplitResult"""
-        
-        super(HttpConnector, self).__init__(options, *args, **kwargs)
+
 
     @property
     def headers(self):
@@ -46,14 +57,14 @@ class HttpConnector(Connector):
             "User-Agent": USER_AGENT,
         }
 
-        if "remoteLastModified" in self.options['meta']:
+        if "remoteLastModified" in self.document.meta:
 
             base_headers['If-Modified-Since'] =\
-                self.options["meta"]["remoteLastModified"]
+                self.document["meta"]["remoteLastModified"]
 
-        elif "lastCrawlDate" in self.options['meta']:
+        elif "lastCrawlDate" in self.document.meta:
             last_crawl_date = dateutil.parser.parse(
-                self.options['meta']['lastCrawlDate']
+                self.document.meta['lastCrawlDate']
             )
             base_headers['If-Modified-Since'] =  format_date_time(
                 mktime(last_crawl_date.timetuple())
@@ -63,16 +74,16 @@ class HttpConnector(Connector):
 
     @property
     def cookies(self):
-        if 'cookies' in self.options['meta']:
-            if self.options['meta']['cookies'] is dict:
-                return self.options['meta']['cookies']
+        if 'cookies' in self.document.meta:
+            if self.document.meta['cookies'] is dict:
+                return self.document.meta['cookies']
         return {}
 
     @asyncio.coroutine
-    def work(self):
+    def work(self, future=None):
 
-        if 'method' in self.options['meta']:
-            method = self.options['meta']['method']
+        if 'method' in self.options:
+            method = self.options['method']
         else:
             method = "GET"
 
@@ -85,6 +96,12 @@ class HttpConnector(Connector):
         )
         """:type: ClientResponse"""
 
-        data = response.text()
 
+        data = yield from response.text()
 
+        doc = copy.copy(self.document)
+        """:type: Document"""
+
+        # doc.body = reduce(lambda x,y: x+y, iter(data), "")
+        doc.body = data
+        return parse_document(doc, self.options['contentExtractionConfig'])

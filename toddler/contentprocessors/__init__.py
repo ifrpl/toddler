@@ -2,6 +2,51 @@ __author__ = 'michal'
 
 from toddler import Document
 from functools import reduce
+import importlib
+
+def parse_document(document: Document, config: list):
+    """
+
+    Config Example
+
+    [
+      {
+        "plugin": {
+          "module": "toddler.contentprocessors.soup",
+          "handler": "SoupContentProcessor"
+        },
+        "config": {
+          "title": [
+            {
+              "command": "select",
+              "arguments": "title"
+            }
+          ]
+        }
+
+      }
+    ]
+
+    :param document:
+    :type document: Document
+    :param config:
+    :type config: list
+    :return Document:
+    """
+    def process(document: Document, plugin_config):
+        """
+
+        :param document:
+        :param plugin_config:
+        :return Document:
+        """
+        plugin_module = importlib.import_module(
+            plugin_config['plugin']['module']
+        )
+        handler = getattr(plugin_module, plugin_config['plugin']['handler'])
+        return handler(plugin_config['config']).parse(document)
+
+    return reduce(process, config, document)
 
 class BaseContentProcessor(object):
 

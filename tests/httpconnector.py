@@ -1,45 +1,115 @@
 __author__ = 'michal'
 
 import unittest
-from toddler.crawler.connector.http import HttpConnector
 import asyncio
+from toddler.crawler.connector.http import HttpConnector
+from toddler import Document
+import aiohttp
+from aiohttp import server as aioserver
+import time
+import json
 
-class BroadcastMonitor(asyncio.Protocol):
+class TestServerHttpProtocol(aioserver.ServerHttpProtocol):
 
-
-    def __init__(self, cb_data_received):
-
-        self.cb_data_received = cb_data_received
-
-    def connection_made(self, transport: asyncio.Transport):
-
-        self.transport = transport
-
-    def data_received(self, data):
-
-        self.cb_data_received(data)
+    def handle_request(self, message, payload):
+        now = time.time()
+        response = aiohttp.Response(
+            self.writer, 404, http_version=message.version, close=True)
 
 
-    def eof_received(self):
+        body = """
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Test Ad</title>
+                </head>
+                <body>
+                    <div>Price <span>123€</span></div>
+                </body>
+            </html>
+        """
 
-        print("> Eof received")
-        pass
+        response.add_headers(
+            ('CONTENT-TYPE', 'text/html'),
+            ('CONTENT-LENGTH', str(len(body))))
+        response.send_headers()
+        response.write(body.encode("utf8"))
+        drain = response.write_eof()
 
+        self.keep_alive(False)
+        self.log_access(message, None, response, time.time() - now)
+
+        return drain
 
 class HttpConnectorTest(unittest.TestCase):
 
+    http_test_port = 8181
+
+    def __init__(self, *args, **kwargs):
+
+        super(HttpConnectorTest, self).__init__(*args, **kwargs)
+        self.http_server = None
+        """:type: asyncio.base_events.Server"""
+
+    def setUp(self):
+
+        loop = asyncio.get_event_loop()
+
+        f = loop.create_server(
+            lambda: TestServerHttpProtocol(),
+            '127.0.0.1',
+            self.http_test_port
+        )
+
+        self.http_server = loop.run_until_complete(f)
+        """:type: asyncio.base_events.Server"""
 
     def testBroadcast(self):
 
-        httpconnector = HttpConnector({"broadcastPort": 8090})
-        loop = httpconnector.loop
+        doc = Document()
 
-        # connect = loop.create_datagram_endpoint(
-        #     lambda: BroadcastMonitor(message_handling),
-        #     remote_addr=('255.255.255.255', 8090))
+        doc.url = "http://localhost:%d" % self.http_test_port
 
-        httpconnector.setup_broadcast_listener()
+        content_extraction_config_json = """
+        [ {
+            "plugin": {
+                "module":"toddler.contentprocessors.soup",
+                "handler": "SoupContentProcessor"
+            },
+            "config": {
+                "title": [
+                    {
+                        "command": "find",
+                        "arguments": "title"
+                    },
+                    {
+                        "command": "text"
+                    }
+                ]
+            }
+          }
+        ]
+        """
 
-        loop.run_forever()
-        loop.close()
+        httpconnector = HttpConnector(
+            doc,
+            {
+                "contentExtractionConfig": json.loads(
+                    content_extraction_config_json
+                )
+            }
+        )
+
+        loop = asyncio.get_event_loop()
+
+        doc = loop.run_until_complete(httpconnector.work())
+        """:type: Document"""
+        self.assertEqual(doc.content['title'][0], "Test Ad")
+
+
+
+
+
+    def tearDown(self):
+        self.http_server.close()
 

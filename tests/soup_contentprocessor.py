@@ -117,20 +117,27 @@ class SoupContentProcessorTest(unittest.TestCase):
                             ],
                             [
                                 {
-                                    "command": "select",
-                                    "arguments": "td.f3"
-                                },
-                                {
-                                    "command": "text"
-                                }
-                            ],
-                            [
-                                {
-                                    "command": "select",
-                                    "arguments": "td.f2"
-                                },
-                                {
-                                    "command": "text"
+                                    "command": "join",
+                                    "arguments": [
+                                        [
+                                            {
+                                                "command": "select",
+                                                "arguments": "td.f3"
+                                            },
+                                            {
+                                                "command": "text"
+                                            }
+                                        ],
+                                        [
+                                            {
+                                                "command": "select",
+                                                "arguments": "td.f2"
+                                            },
+                                            {
+                                                "command": "text"
+                                            }
+                                        ]
+                                    ]
                                 }
                             ]
                         ]
