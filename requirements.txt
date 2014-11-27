@@ -2,3 +2,5 @@ lxml
 BeautifulSoup4
 aiohttp
 python-dateutil
+python3-pika
+gearman

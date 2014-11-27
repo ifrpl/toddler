@@ -1,0 +1,47 @@
+doctype html
+html
+    head
+        meta(charset="utf8")
+        meta(name="viewport", content="width=device-width,initial-scale=1")
+        title Toddler WebApp
+        each css in cssFiles
+            link(href=css, rel='stylesheet')
+        each js in jsFiles
+            script(src=js,lang='text/javascript')
+    body(ng-app="toddlerWebApp")
+        div.navbar.navbar-default.navbar-fixed-top(ng-controller="NavbarController")
+            div.container
+                div.navbar-header
+                    button.navbar-toggle.collapsed(data-toggle="collapse",
+                    data-target=".navbar-collapse")
+                        i.fa-bars
+                    a.navbar-brand(href="/")
+                        i.fa.fa-medkit
+                        | &nbsp;
+                        span Toddler Web App
+                div.navbar-collapse.collapse
+                    ul.nav.navbar-nav
+                        li
+                            a(href="/")
+                                i.fa.fa-home
+                                | &nbsp;
+                                span(data-i18n="navbar.home")
+                    ul.nav.navbar-nav.navbar-right
+                        li(ng-if="logged_in==true")
+                            a(style="cursor:pointer",ng-click="logout()")
+                                i.fa.fa-lock
+                                | &nbsp;
+                                span(data-i18n="navbar.logout")
+                        li(ng-if="logged_in==false")
+                            a(style="cursor:pointer",href="/login")
+                                i.fa.fa-lock
+                                | &nbsp;
+                                span(data-i18n="navbar.login")
+
+
+        div.container(style='min-height: 500px; margin-top: 60px;')
+            div(ng-view).content
+        footer.well
+            div.container
+                p(align='center').text-muted.
+                    Toddler v #{version}

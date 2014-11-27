@@ -64,7 +64,7 @@ class HttpConnectorTest(unittest.TestCase):
         self.http_server = loop.run_until_complete(f)
         """:type: asyncio.base_events.Server"""
 
-    def testBroadcast(self):
+    def testConnector(self):
 
         doc = Document()
 

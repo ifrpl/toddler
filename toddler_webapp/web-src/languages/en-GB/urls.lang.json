@@ -1,0 +1,10 @@
+{
+  "heading": "Search Index Content Management",
+  "updateDocument": "Update document",
+  "updateDocument-label": "URL to update",
+  "updateDocument-button": "Update",
+  "deleteDocument": "Delete document",
+  "deleteDocument-label": "URL to delete",
+  "deleteDocument-button": "Delete",
+  "pleaseWaitUpdatingUrl": "Updating url..."
+}

@@ -1,0 +1,13 @@
+alert(ng-repeat="alert in alerts",ng-class="alert.type") {{ alert.msg }}
+div(style="width: 400px; margin: 0 auto").panel.panel-default
+    div.panel-heading
+        div(data-i18n="login.panelTitle").panel-title
+    div.panel-body
+        form(role="form",name="login_form",ng-submit="login()")
+            div.form-group
+                label(data-i18n="login.username")
+                input(name="user",type="text",ng-model="user").form-control
+            div.form-group
+                label(data-i18n="login.password")
+                input(name="password",type="password",ng-model="password").form-control
+            button(data-i18n="login.login",type="submit").btn.btn-primary.pull-right

@@ -1,0 +1,26 @@
+//
+   Created by michal on 24/11/14.
+h1(data-i18n="urls.heading")
+hr
+h2
+   i.fa.fa-refresh.text-primary
+   | &nbsp;
+   span(data-i18n="urls.updateDocument")
+div.row.form-horizontal
+   div.form-group
+      label.col-md-3(data-i18n="urls.updateDocument-label").control-label
+      div.col-md-6
+         input(ng-model="update_url").form-control
+      div.col-md-2
+         button.btn.btn-primary(ng-click="update_url_action()", data-i18n="urls.updateDocument-button")
+h2
+   i.fa.fa-trash.text-danger
+   | &nbsp;
+   span(data-i18n="urls.deleteDocument")
+div.row.form-horizontal
+   div.form-group
+      label.col-md-3(data-i18n="urls.deleteDocument-label").control-label
+      div.col-md-6
+         input(ng-model="delete_url").form-control
+      div.col-md-2
+         button.btn.btn-primary(ng-click="delete_url_action()", data-i18n="urls.deleteDocument-button")
