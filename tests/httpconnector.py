@@ -41,6 +41,7 @@ class TestServerHttpProtocol(aioserver.ServerHttpProtocol):
 
         return drain
 
+
 class HttpConnectorTest(unittest.TestCase):
 
     http_test_port = 8181
@@ -105,9 +106,6 @@ class HttpConnectorTest(unittest.TestCase):
         doc = loop.run_until_complete(httpconnector.work())
         """:type: Document"""
         self.assertEqual(doc.content['title'][0], "Test Ad")
-
-
-
 
 
     def tearDown(self):

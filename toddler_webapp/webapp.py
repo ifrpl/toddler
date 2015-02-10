@@ -35,6 +35,7 @@ def parse_config(config_filepath):
 
 app = Flask(__name__)
 
+
 def check_csrf(func):
     global app
     @wraps(func)

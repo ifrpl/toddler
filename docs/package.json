@@ -1,0 +1,25 @@
+{
+  "name": "docs",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "~3.3.2"
+  },
+  "devDependencies": {
+    "coffee-script": "~1.9.0",
+    "gulp": "~3.8.11",
+    "mermaid": "~0.3.3",
+    "gulp-markdown-pdf": "~2.0.0",
+    "gulp-ignore": "~1.2.1",
+    "gulp-shell": "~0.3.0",
+    "ansi-regex": "~1.1.0",
+    "lodash": "~3.1.0",
+    "gulp-clean": "~0.3.1"
+  }
+}

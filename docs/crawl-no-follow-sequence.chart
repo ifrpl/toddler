@@ -1,0 +1,16 @@
+
+sequenceDiagram
+    WebApp->>CrawlManager: Crawl this link: http://example.com, no-follow
+    CrawlManager->>Crawler: Crawl this: http://example.com
+    Crawler->>CrawlManager: got this `html` and links [...]
+    alt didn't got http status 200
+        Crawler-->CrawlManager: Requeue max 3 times
+    else got http status 200
+        CrawlManager->>Analyser: Analyse this html
+    end
+    Analyser->>CrawlManager: Processed Document
+    alt document is flagged to be index
+        CrawlManager->>IndexManager: Take this Document
+    else document is flagged to be dropped
+        CrawlManager-->Analyser: Remember url that it was dropped
+    end

@@ -1,12 +1,14 @@
 __author__ = 'michal'
 
-__author__ = 'michal'
-
 import logging
 import logging.config
 import pika
 from toddler import exceptions
 import json
+from toddler import logging as t_logging
+import asyncio
+from asyncio import subprocess
+
 
 class BaseManager(object):
     """Base Manager class"""
@@ -17,7 +19,45 @@ class BaseManager(object):
         :param dict msg:
         :return:
         """
+        
         raise NotImplemented
+
+
+class _TaskRunnerDataProtocol(asyncio.SubprocessProtocol):
+    
+    def __init__(self, exit_future: asyncio.Future):
+        
+        self.exit_future = exit_future
+        self.output = bytearray()
+        
+    def pipe_data_received(self, fd, data):
+        self.output.extend(data)
+        
+    def process_exited(self):
+        self.exit_future.set_result(self.output)
+   
+    
+class TaskRunnerMixIn(object):
+    
+    def run_task(self, exec_path, message):
+
+        loop = asyncio.get_event_loop()
+        
+        future = asyncio.Future(loop=loop)
+        
+        @asyncio.coroutine
+        def _run():
+            nonlocal future, exec_path
+            create = loop.subprocess_exec(
+                lambda x: _TaskRunnerDataProtocol(future),
+                exec_path,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            )
+            transport, protocol = yield from create
+            transport.
+        
+        return future
 
 class RabbitManager(BaseManager):
     """Base for managers that connects to rabbit
@@ -85,37 +125,19 @@ class RabbitManager(BaseManager):
                     self._exchange_type = config['rabbit']['exchangeType']
                 except KeyError:
                     # setting defaults
-                    self._exchange_type = "topic"
+                    self._exchange_type = "direct"
             else:
                 self._exchange_type = exchange_type
         except KeyError as e:
             raise exceptions.NotConfigured(str(e))
+        try:
+            log_config = self._config['logging']
+        except KeyError:
+            log_config = None
 
-        self.log = None
-        self.setup_logging(log)
-
-    def setup_logging(self, logger=None):
-        """
-        Sets up logging for this process
-        :param logger: optional logger that will be used by manager
-        :return None:
-        """
-
-        if logger is None:
-
-            try:
-                logging.config.dictConfig(self._config['logging'])
-                self.log = logging.getLogger(self.__class__.__name__)
-            except KeyError:
-                logging.warning(
-                    "Logging not configured for %s" % self.__class__.__name__
-                )
-                self.log = logger
-                self.log.setLevel(logging.DEBUG)
-
-
-        else:
-            self.log = logger
+        self.log = t_logging.setup_logging(log,
+                                           self.__class__.__name__,
+                                           log_config)
 
     def reconnect(self):
         """Will be run by IOLoop.time if the connection is closed.
@@ -163,19 +185,23 @@ class RabbitManager(BaseManager):
 
         :param pika.channel.Channel channel:
         """
+        self.log.info("Channel opened")
         self._channel = channel
         self._channel.add_on_close_callback(self.on_channel_closed)
+        self.start_consuming()
 
     def close_channel(self):
         self.log.info("Closing channel")
         self._channel.close()
 
     def open_channel(self):
+        self.log.info("Opening channel")
         self._connection.channel(on_open_callback=self.on_channel_open)
 
     def on_connection_open(self, connection):
 
         self.log.info("Connected")
+        self._connection = connection
         self._connection.add_on_close_callback(self.on_connection_closed)
         self.open_channel()
 
@@ -193,7 +219,7 @@ class RabbitManager(BaseManager):
     def on_cancel_ok(self, frame):
         """Invoked when locale Basic.Cancel is acknowledged by RabbitMQ
 
-        :param frame:
+        :param pika.frame.Method frame:
         :return:
         """
 
@@ -204,7 +230,7 @@ class RabbitManager(BaseManager):
         """Invoked by pika when RabbitMQ sends a Basic.Cancel for a consumer
         receiving messages.
 
-        :param pika.method.frame method_frame: The Basic.Cancel frame
+        :param pika.frame.Method method_frame: The Basic.Cancel frame
         :return:
         """
         self.log.info("Consumer was cancelled remotely, shutting down: %r",
@@ -237,11 +263,7 @@ class RabbitManager(BaseManager):
 
         self.acknowledge_message(basic_deliver.delivery_tag)
 
-
-        if properties.content_type == "application/json":
-            self.process_task(json.loads(body))
-        else:
-            self.process_task(body)
+        self.process_task(body)
 
 
 
@@ -270,8 +292,11 @@ class RabbitManager(BaseManager):
 
     def run(self):
         """Run consumer"""
-        self._connection = self.connect()
-        self._connection.ioloop.start()
+        c = self.connect()
+        c.ioloop.start()
+        # self._connection = self.connect()
+        # self.open_channel()
+        # self._connection.ioloop.start()
 
     def stop(self):
         """Stops consuming service
