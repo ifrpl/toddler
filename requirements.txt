@@ -3,4 +3,11 @@ BeautifulSoup4
 aiohttp
 python-dateutil
 python3-pika
-gearman
+requests
+addict
+pymongo
+reppy
+ujson
+mongoengine
+mongomock
+blinker

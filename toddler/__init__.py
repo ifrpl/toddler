@@ -1,6 +1,9 @@
 __author__ = 'michal'
+__version__ = "0.1.0"
 
-import json
+import ujson as json
+from . import utils
+from .rabbit_sender import send_message_sync
 
 
 class Document(object):

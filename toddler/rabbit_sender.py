@@ -1,9 +1,20 @@
 __author__ = 'michal'
 
 import pika
+import asyncio
 
 
-def send_message(rabbit_url, message, queue, exchange, routing_key):
+def send_message_sync(rabbit_url, message, routing_key, exchange=""):
+    """
+    Send message to rabbit mq synchronously
+    
+    :param rabbit_url: 
+    :param message: 
+    :param queue: 
+    :param exchange: 
+    :param routing_key: 
+    :return:
+    """
 
     connection = pika.BlockingConnection(pika.URLParameters(rabbit_url))
 
@@ -25,5 +36,29 @@ def send_message(rabbit_url, message, queue, exchange, routing_key):
         raise ValueError
 
 
+def send_message(rabbit_url, message, routing_key, exchange=""):
+    """
+    
+    :param rabbit_url:
+    :param message:
+    :param queue:
+    :param exchange:
+    :param routing_key:
+    :return asyncio.Future:
+    """
+    
+    future = asyncio.Future()
+    
+    @asyncio.coroutine
+    def _send():
+        
+        try:
+            send_message_sync(rabbit_url, message, routing_key, exchange)
+            future.set_result(True)
+        except Exception as e:
+            future.set_exception(e)
+            
+    asyncio.async(_send())
 
+    return future
 

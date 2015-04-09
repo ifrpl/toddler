@@ -1,22 +1,50 @@
 __author__ = 'michal'
 
-import logging
-import logging.config
 import pika
 from toddler import exceptions
-import json
+import ujson
 from toddler import logging as t_logging
 import asyncio
-from asyncio import subprocess
+from concurrent.futures import ThreadPoolExecutor, Future, ProcessPoolExecutor
+import time
+
+
+def json_task(func):
+    """
+    Decorator for easier json decoding for RabbitManager
+    :param func:
+    :return:
+    """
+    def wrapper(self, body):
+        return func(self, ujson.loads(body.decode("utf8")))
+
+    return wrapper
+
+
+class RequeueMessage(Exception):
+    pass
 
 
 class BaseManager(object):
     """Base Manager class"""
 
+    def process_task_async(self, msg, loop=None):
+        
+        result = loop.run_in_executor(
+            None,
+            self.process_task,
+            msg
+        )
+        
+        return result
+
     def process_task(self, msg):
         """
 
-        :param dict msg:
+        `We are in thread, no asyncio please, as we do not attach event loop
+         here`
+
+        :param msg:
         :return:
         """
         
@@ -36,34 +64,12 @@ class _TaskRunnerDataProtocol(asyncio.SubprocessProtocol):
     def process_exited(self):
         self.exit_future.set_result(self.output)
    
-    
-class TaskRunnerMixIn(object):
-    
-    def run_task(self, exec_path, message):
-
-        loop = asyncio.get_event_loop()
-        
-        future = asyncio.Future(loop=loop)
-        
-        @asyncio.coroutine
-        def _run():
-            nonlocal future, exec_path
-            create = loop.subprocess_exec(
-                lambda x: _TaskRunnerDataProtocol(future),
-                exec_path,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            )
-            transport, protocol = yield from create
-            transport.
-        
-        return future
 
 class RabbitManager(BaseManager):
     """Base for managers that connects to rabbit
 
     """
-    def __init__(self, url=None, queue=None, routing_key=None,
+    def __init__(self, rabbitmq_url=None, queue=None, routing_key=None,
                  exchange=None, exchange_type=None, config=None, log=None):
         """
 
@@ -78,7 +84,7 @@ class RabbitManager(BaseManager):
             }
         }
 
-        :param str url: optional url to rabbitmq
+        :param str rabbitmq_url: optional url to rabbitmq
         :param str queue: name of the queue
         :param str routing_key: routing key for queue
         :param str exchange: name of the exchange
@@ -95,11 +101,15 @@ class RabbitManager(BaseManager):
         self._closing = False
         self._consumer_tag = None
         self._config = config
+        self._max_tasks = 3  # 2 cores + 1
+        self._tasks_number = 0
+        self._executor = ThreadPoolExecutor(max_workers=3)
+
         try:
-            if url is None:
-                self._url = config['rabbit']['url']
+            if rabbitmq_url is None:
+                self._rabbitmq_url = config['rabbit']['url']
             else:
-                self._url = url
+                self._rabbitmq_url = rabbitmq_url
 
             if queue is None:
                 self._queue = config['rabbit']['queue']
@@ -128,16 +138,20 @@ class RabbitManager(BaseManager):
                     self._exchange_type = "direct"
             else:
                 self._exchange_type = exchange_type
-        except KeyError as e:
+        except (KeyError, TypeError) as e:
             raise exceptions.NotConfigured(str(e))
-        try:
-            log_config = self._config['logging']
-        except KeyError:
-            log_config = None
+        if log is None:
+            try:
+                log_config = self._config['logging']
+                self.log = t_logging.setup_logging(log,
+                                                   self.__class__.__name__,
+                                                   log_config)
+            except (KeyError, TypeError):
+                log_config = None
+        else:
+            self.log = log
 
-        self.log = t_logging.setup_logging(log,
-                                           self.__class__.__name__,
-                                           log_config)
+
 
     def reconnect(self):
         """Will be run by IOLoop.time if the connection is closed.
@@ -207,15 +221,16 @@ class RabbitManager(BaseManager):
 
     def connect(self):
         """Connects to rabbitmq server, according to config
-        :return:
+        :return pika.SelectConnection:
         """
         self.log.info("Connecting to RabbitMQ")
         return pika.SelectConnection(
-            pika.URLParameters(self._url),
+            pika.URLParameters(self._rabbitmq_url),
             self.on_connection_open,
             stop_ioloop_on_close=False
-        )
 
+        )
+    
     def on_cancel_ok(self, frame):
         """Invoked when locale Basic.Cancel is acknowledged by RabbitMQ
 
@@ -246,6 +261,15 @@ class RabbitManager(BaseManager):
         """
         self.log.info("Acknowledging message %s", delivery_tag)
         self._channel.basic_ack(delivery_tag)
+        
+    def requeue_message(self, delivery_tag):
+        """
+        
+        :param delivery_tag: 
+        :return:
+        """
+        self.log.info("Requeuing message %s", delivery_tag)
+        self._channel.basic_nack(delivery_tag, requeue=True)
 
     def on_message(self, channel, basic_deliver, properties, body):
         """Invoked when message received from rabbit
@@ -257,15 +281,46 @@ class RabbitManager(BaseManager):
         :return:
         """
 
-        self.log.info("Received messsages # %s from %s",
+        self.log.info("Received messages # %s from %s",
                       basic_deliver.delivery_tag,
                       properties.app_id)
+        
+        try:
+            if self._tasks_number >= self._max_tasks:
+                raise RuntimeError("Max tasks limit reached")
+            
+            self._tasks_number += 1
+            
+            ftr = self._executor.submit(self.process_task, body)
 
-        self.acknowledge_message(basic_deliver.delivery_tag)
+            def process_done(future: Future):
+                nonlocal self
+                if future.cancelled():
+                    # process_task ended by cancel
+                    self.requeue_message(self.requeue_message(
+                        basic_deliver.delivery_tag)
+                    )
+                else:
+                    if future.exception():
+                        self.log.exception(future.exception())
+                        
+                        self.requeue_message(
+                            basic_deliver.delivery_tag
+                        )
+                    else:
+                        self.acknowledge_message(basic_deliver.delivery_tag)
+                self._tasks_number -= 1
+                
+            ftr.add_done_callback(process_done)
 
-        self.process_task(body)
+        except RuntimeError:
+            self.requeue_message(basic_deliver.delivery_tag)
+            time.sleep(0.5)
 
-
+        except Exception as e:
+            self.log.exception(e)
+            self.requeue_message(basic_deliver.delivery_tag)
+            time.sleep(10)
 
     def stop_consuming(self):
         """Send Basic.Cancel to rabbit
@@ -289,15 +344,13 @@ class RabbitManager(BaseManager):
         self._consumer_tag = self._channel.basic_consume(self.on_message,
                                                          self._queue)
 
-
     def run(self):
         """Run consumer"""
-        c = self.connect()
-        c.ioloop.start()
-        # self._connection = self.connect()
-        # self.open_channel()
-        # self._connection.ioloop.start()
 
+        c = self.connect()
+        """:type: pika.SelectConnection"""
+        c.ioloop.start()
+            
     def stop(self):
         """Stops consuming service
         :return:
@@ -306,6 +359,8 @@ class RabbitManager(BaseManager):
         self.log.info("Stopping")
         self._closing = True
         self.stop_consuming()
+        self._executor.shutdown(True)
         self._connection.ioloop.start()
         self.log.info("Stopped")
+        
 

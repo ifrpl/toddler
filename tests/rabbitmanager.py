@@ -5,16 +5,18 @@ from toddler.managers import RabbitManager
 import unittest
 import asyncio
 import asyncio.subprocess
-from toddler.rabbit_sender import send_message
+from toddler.rabbit_sender import send_message_sync, send_message
 import logging
 import sys
 import json
 from toddler.utils import run_process
+import time
 
 
 class _TestRabbit(RabbitManager):
 
     def process_task(self, msg):
+        
         msg = json.loads(msg.decode("utf8"))
         self.log.info("msg: " + msg['msg'])
 
@@ -28,12 +30,19 @@ class TestRabbitManager(unittest.TestCase):
 
     def test_rabbit(self):
 
-        send_message("amqp://webapp:webapp@fliv-dev/", '{"msg": "true"}',
-                     "test", "test", "test")
+        for x in range(0, 20):
+            print("Sending msg", x)
+            send_message_sync("amqp://webapp:webapp@fliv-dev/",
+                              '{"msg": "true", "id": '+str(x)+'}',
+                              "test")
 
         out = run_process(sys.executable, __file__)
+        
         print(out.decode("utf8"))
+        
         self.assertIn("msg: true", out.decode("utf8"))
+        
+        self.assertEqual(out.decode("utf8").count("msg: true"), 20)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,29 @@ __author__ = 'michal'
 import asyncio
 
 
+def un_camel(text):
+    """ Converts a CamelCase name into an under_score name.
+
+        >>> un_camel('CamelCase')
+        'camel_case'
+        >>> un_camel('getHTTPResponseCode')
+        'get_http_response_code'
+    """
+    result = []
+    pos = 0
+    while pos < len(text):
+        if text[pos].isupper():
+            if pos-1 > 0 and text[pos-1].islower() or pos-1 > 0 and \
+                                    pos+1 < len(text) and text[pos+1].islower():
+                result.append("_%s" % text[pos].lower())
+            else:
+                result.append(text[pos].lower())
+        else:
+            result.append(text[pos])
+        pos += 1
+    return "".join(result)
+
+
 def run_process(*args, **kwargs):
 
     class TestProtocol(asyncio.SubprocessProtocol):
@@ -16,14 +39,14 @@ def run_process(*args, **kwargs):
         def pipe_data_received(self, fd, data):
 
             decoded = data.decode("utf8")
+            print(decoded)
             if "msg" in decoded:
                 self.msg_counter += 1
 
             self.output.extend(data)
 
-            if self.msg_counter > 0:
+            if self.msg_counter > 19:
                 self.enough_data_future.set_result(self.msg_counter)
-
 
         def pipe_connection_lost(self, fd, exc):
 
@@ -49,9 +72,8 @@ def run_process(*args, **kwargs):
 
         return protocol.output
 
-
     loop = asyncio.get_event_loop()
 
-    out = loop.run_until_complete(subprocess(loop))
+    out = loop.run_until_complete(asyncio.async(subprocess(loop)))
 
     return out
