@@ -61,6 +61,6 @@ class Crawler(unittest.TestCase):
                 self.assertTrue(sync.called)
                 args, kwargs = sync.call_args
                 d = json.loads(args[1])
-                self.assertEqual(d['html'], html)
+                self.assertEqual(d['body'], html)
                 self.assertEqual(d['cookies']['sessid'], "123")
                 self.assertEqual(d['headers']['content-type'], "text/html")

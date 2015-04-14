@@ -53,6 +53,8 @@ class SoupContentProcessor(BaseContentProcessor):
 
 
     def select(self, soup: BeautifulSoup, select_string):
+        if isinstance(select_string, list):
+            select_string = select_string.pop()
         return soup.select(select_string)
 
     def find_previous_sibling(self, soup: BeautifulSoup, *args, **kwargs):

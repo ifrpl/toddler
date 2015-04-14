@@ -42,7 +42,7 @@ class IndexManagerTests(TestCase):
 
         msg = Dict()
         msg.url = "http://example.com/home.html"
-        msg.action = "delete"
+        msg.action = "insert"
         msg.document = {
             "features": {
                 "title": "test"
@@ -58,7 +58,7 @@ class IndexManagerTests(TestCase):
             update_one = ob.update_one
             update_one.return_value = True
             self.index_manager.process_task(ujson.dumps(msg).encode("utf8"))
-            args, kwargs = update_one.call_args
             self.assertTrue(update_one.called)
+            args, kwargs = update_one.call_args
             self.assertEqual(kwargs['set__features']['title'], "test")
 

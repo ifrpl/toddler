@@ -48,6 +48,7 @@ def parse_document(document: Document, config: list):
 
     return reduce(process, config, document)
 
+
 class BaseContentProcessor(object):
 
     def __init__(self, config):

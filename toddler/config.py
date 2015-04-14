@@ -2,9 +2,16 @@ __author__ = 'michal'
 
 import json
 import os
+import ujson
 
 
 configs = {}
+
+
+def read_config_file(file_path):
+
+    with open(file_path, 'r') as file:
+        return ujson.load(file)
 
 
 def set_config(name, file_path):

@@ -73,7 +73,7 @@ class CrawlManagerTests(unittest.TestCase):
             """
 
         crawl_result.url = "http://example.com/home.html"
-        crawl_result.html = html
+        crawl_result.body = html
         crawl_result.cookies = {"sessid": "123123"}
         crawl_result.actions = ["follow", "index"]
         crawl_result.status_code = 200
@@ -276,13 +276,13 @@ class CrawlManagerTests(unittest.TestCase):
             inst.first.return_value = host
 
             crawl_result = self.crawl_result
-            soup = BeautifulSoup(crawl_result.html)
+            soup = BeautifulSoup(crawl_result.body)
             soup.find("head").append(
                 Tag(builder=soup.builder, name="meta",
                     attrs=dict(name="robots", content="NOINDEX, NOFOLLOW"))
             )
             
-            crawl_result.html = soup.prettify("utf8")
+            crawl_result.body = soup.prettify("utf8")
             cm = self.crawl_manager
             
             self.assertEqual(
@@ -298,14 +298,14 @@ class CrawlManagerTests(unittest.TestCase):
             inst = objects.return_value
             inst.first.return_value = host
             crawl_result = self.crawl_result
-            soup = BeautifulSoup(crawl_result.html)
-        
+            soup = BeautifulSoup(crawl_result.body)
+
             soup.find("head").append(
                 Tag(builder=soup.builder, name="meta",
                     attrs=dict(name="robots", content="NOINDEX, NOFOLLOW"))
             )
             crawl_result.actions = ""
-            crawl_result.html = soup.prettify("utf8")
+            crawl_result.body = soup.prettify("utf8")
             cm = self.crawl_manager
             self.assertFalse(cm.should_be_indexed(crawl_result))
 
@@ -391,7 +391,7 @@ class CrawlManagerTests(unittest.TestCase):
                 request = ujson.loads(args[1])
 
                 self.assertEqual(request['url'], self.crawl_result.url)
-                self.assertEqual(request['html'], self.crawl_result.html)
+                self.assertEqual(request['body'], self.crawl_result.body)
 
     def test_should_create_deletion_index_task(self):
 

@@ -99,7 +99,7 @@ class Crawler(RabbitManager):
 
         result = addict.Dict()
 
-        result.html = req.text
+        result.body = req.text
         result.cookies = req.cookies.get_dict()
         result.url = crawl_request.url
         result.crawl_task = crawl_request

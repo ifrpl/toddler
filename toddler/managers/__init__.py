@@ -7,6 +7,7 @@ from toddler import logging as t_logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, Future, ProcessPoolExecutor
 import time
+from mongoengine import connect
 
 
 def json_task(func):
@@ -27,6 +28,12 @@ class RequeueMessage(Exception):
 
 class BaseManager(object):
     """Base Manager class"""
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
     def process_task_async(self, msg, loop=None):
         
@@ -63,7 +70,7 @@ class _TaskRunnerDataProtocol(asyncio.SubprocessProtocol):
         
     def process_exited(self):
         self.exit_future.set_result(self.output)
-   
+
 
 class RabbitManager(BaseManager):
     """Base for managers that connects to rabbit
@@ -364,3 +371,25 @@ class RabbitManager(BaseManager):
         self.log.info("Stopped")
         
 
+class RabbitManagerWithMongoDb(RabbitManager):
+
+    def __init__(self, mongodb_url, *args, **kwargs):
+        """
+        :param mongodb_url:
+        :param str rabbitmq_url: optional url to rabbitmq
+        :param str queue: name of the queue
+        :param str routing_key: routing key for queue
+        :param str exchange: name of the exchange
+        :param str exchange_type: type of the exchange
+        :param dict config: Manager configuration from parsed json config all
+                            the above options can be configured from it
+        :param logging.Logger log: optional logger that will replace new one
+        :raises exceptions.NotConfigured:
+        :return:
+        """
+        self._mongodb_url = mongodb_url
+        self._connect_mongodb()
+        super(RabbitManagerWithMongoDb, self).__init__(*args, **kwargs)
+
+    def _connect_mongodb(self):
+        connect(self._mongodb_url)

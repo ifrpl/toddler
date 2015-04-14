@@ -45,7 +45,7 @@
             "csrftoken": "dfsdf9023"
         },
         "status_code": 200,
-        "html": "<html>...</html>",
+        "body": "<html>...</html>",
         "actions": ["follow", "index"],
         "headers": {'content-type': "text/html"}
         "crawl_time": "2015-03-24T11:43:27.746219+00:00"
@@ -59,7 +59,7 @@ Note, that headers are a direct copy from server, and as they are from `requests
  
     {
         "url": "http(s)://example.org/home.html",
-        "html" "<html>...</html>",
+        "body" "<html>...</html>",
         "headers": {"content-type": "text/html"},
         "crawl_time": "2015-03-24T11:43:27.746219+00:00"
     }

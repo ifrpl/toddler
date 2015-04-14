@@ -173,7 +173,7 @@ class CrawlManager(RabbitManager):
         if not has_robots_txt(host):
             raise NoRobotsForHostError
         
-        soup = BeautifulSoup(crawl_result.html)
+        soup = BeautifulSoup(crawl_result.body)
         
         for meta_tag in soup.select("meta"):
             if meta_tag['name'].lower() == "robots":
@@ -243,7 +243,7 @@ class CrawlManager(RabbitManager):
         :param crawl_request: 
         :return bool:
         """
-        return can_index_html(crawl_result.html,
+        return can_index_html(crawl_result.body,
                               ",".join(crawl_result.actions))
     
     def process_robots_task(self, crawl_result: Dict):
@@ -258,7 +258,7 @@ class CrawlManager(RabbitManager):
         rt = RobotsTxt()
         rt.status = 'downloaded'
         rt.status_code = crawl_result.status_code
-        rt.content = crawl_result.html
+        rt.content = crawl_result.body
         rt.expires = now() + timedelta(10)  # 10 days
 
         host.robots_txt = rt
@@ -269,7 +269,7 @@ class CrawlManager(RabbitManager):
         analysis_request = Dict()  # we <3 addict
         
         analysis_request.url = crawl_result.url
-        analysis_request.html = crawl_result.html
+        analysis_request.body = crawl_result.body
         analysis_request.headers = crawl_result.headers
         analysis_request.crawl_time = crawl_result.crawl_time
         

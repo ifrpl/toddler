@@ -33,7 +33,7 @@ def hash_url(url):
     :return str:
     """
     h = md5()
-    h.update(url)
+    h.update(url.encode("utf8"))
     return h.hexdigest()
 
 
@@ -104,6 +104,7 @@ class IndexDocument(Document):
     host = StringField()
     meta_data = DictField()
     features = DictField()
+    deleted = BooleanField(default=False)
     last_modified = DateTimeField()
 
 

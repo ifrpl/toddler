@@ -52,3 +52,4 @@ class Document(object):
         for key in ['url', 'meta', 'features', 'content', 'body']:
             if key in source_dict:
                 setattr(self, key, source_dict[key])
+
