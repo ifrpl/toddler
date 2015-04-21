@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 import uuid
 
 
-def push_document(document: Document, push_api_url, connector="default"):
+def push_document(document: Document, push_api_url, connector="properties"):
     """
 
     :param document:
@@ -16,7 +16,7 @@ def push_document(document: Document, push_api_url, connector="default"):
     """
     papi_url = urljoin(push_api_url,
                        "/papi/4/connectors/%s/add_documents" % connector)
-    doc_id = uuid.uuid4()
+    doc_id = str(uuid.uuid4()).replace("-", "")
 
     fn = lambda x: "PAPI_%s:%s" % (doc_id, x)
 
@@ -26,15 +26,18 @@ def push_document(document: Document, push_api_url, connector="default"):
 
     def _add_meta(name, val):
         meta_name = lambda x: fn("meta:%s") % x
-        try:
-            push[meta_name(name)].append(val)
-        except KeyError:
-            push[meta_name(name)] = [val]
+        push[meta_name(name)] = ('', val)
 
     [_add_meta(key, val) for key, val in document.features.items()]
+
+    # response_session = requests.get(
+    #     urljoin(papi_url,
+    #             "/papi/4/connectors/%s/get_current_session_id" % connector)
+    # )
+
     response = requests.post(
         papi_url,
-        data=push
+        files=push
     )
 
     return response

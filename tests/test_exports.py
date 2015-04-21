@@ -43,9 +43,16 @@ class TestExports(TestCase):
 
         from toddler.exports import nimbusview
 
-        response = nimbusview.push_document(
-            document=self.doc,
-            push_api_url="http://banshee.hosting.lan.ifresearch.org:10302"
-        )
+        with mock.patch("requests.post") as post:
 
-        self.assertEqual(response.status_code, 200)
+            d = post.return_value
+            d.status_code = 200
+
+            response = nimbusview.push_document(
+                document=self.doc,
+                push_api_url="http://banshee.hosting.lan.ifresearch.org:10402"
+            )
+            """:type response: requests.Response"""
+            args = post.call_args
+            self.assertEqual(len(args[1]['files']), 6)
+

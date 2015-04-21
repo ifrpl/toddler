@@ -1,11 +1,41 @@
 __author__ = 'michal'
 
+import ujson
+import os
 import logging
 import logging.config
 import inspect
+import yaml
 
 
-def setup_logging(logger=None, logger_name=None, config=None):
+default_logging_conf = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+        },
+    },
+    'handlers': {
+        'default': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout'
+            },
+        },
+    'loggers': {
+        '': {
+            'handlers': ['default'],
+            'level': 'DEBUG',
+            'propagate': True
+        }
+    }
+}
+
+
+def setup_logging(logger=None, logger_name=None, config="logging.json",
+                  env_key="TODDLER_LOGGING_CONF"):
     """
     Sets up logging for this process
     :param logger: optional logger that will be used by manager
@@ -17,7 +47,18 @@ def setup_logging(logger=None, logger_name=None, config=None):
 
     if logger is None:
 
+        config = os.getenv(env_key, config)
+
         try:
+            try:
+                with open(config, 'r') as config_file:
+                    if config.endswith(".json"):
+                        config = ujson.load(config_file)
+                    elif config.endswith(".yaml"):
+                        config = yaml.load(config_file.read())
+            except (FileNotFoundError, IOError):
+                config = default_logging_conf
+
             logging.config.dictConfig(config)
             log = logging.getLogger(logger_name)
         except KeyError:

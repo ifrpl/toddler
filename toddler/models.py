@@ -95,6 +95,15 @@ class CrawlDocument(Document):
     latest_status_code = IntField(default=0)
 
 
+def to_set_keywords(**kwargs):
+
+    def _rewrite_keys(d, items):
+        d["set__"+items[0]] = items[1]
+        return d
+
+    return reduce(_rewrite_keys, kwargs.items(), {})
+
+
 @add_url_hash.apply
 @update_last_modified.apply
 class IndexDocument(Document):
@@ -106,6 +115,14 @@ class IndexDocument(Document):
     features = DictField()
     deleted = BooleanField(default=False)
     last_modified = DateTimeField()
+
+    @classmethod
+    def upsert(cls, url_hash, values):
+        kws = to_set_keywords(**values)
+        cls.objects(url_hash=url_hash).update_one(
+            upsert=True,
+            **kws
+        )
 
 
 def upsert_crawl_document(*args, **kwargs):

@@ -11,3 +11,4 @@ ujson
 mongoengine
 mongomock
 blinker
+PyYaml

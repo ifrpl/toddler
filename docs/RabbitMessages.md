@@ -71,7 +71,14 @@ Note, that headers are a direct copy from server, and as they are from `requests
     {
         "url": "http(s)://example.org/home.html",
         "action": "delete|upsert",
-        "document": {}
+        "document": {
+             "url_hash": md5(hash),
+             "url": "http(s)://example.org/home.html",
+             "features": {
+                 "metaname": ["metavalue"]
+             },
+             "last_modified": ISODATE
+         }
     }
     
 # Mongo Objects

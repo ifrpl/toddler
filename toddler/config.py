@@ -1,9 +1,8 @@
 __author__ = 'michal'
 
-import json
 import os
 import ujson
-
+import yaml
 
 configs = {}
 
@@ -11,19 +10,22 @@ configs = {}
 def read_config_file(file_path):
 
     with open(file_path, 'r') as file:
-        return ujson.load(file)
+        if file_path.endswith(".yaml"):
+            return yaml.load(file.read())
+        else:
+            return ujson.load(file)
 
 
 def set_config(name, file_path):
 
     with open(file_path) as file:
-        configs[name] = json.load(file)
+        configs[name] = ujson.load(file)
 
 
 def parse_config_dir(config_path):
 
     with open(os.path.join(config_path, 'toddler.conf')) as main_cfg_file:
-        main = json.load(main_cfg_file)
+        main = ujson.load(main_cfg_file)
 
         try:
             for name, val in main.items():

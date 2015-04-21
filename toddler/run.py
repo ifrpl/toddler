@@ -5,7 +5,6 @@ from .crawler import Crawler
 from .analyser import Analyser
 from .config import read_config_file
 import argparse
-import argparse
 import sys
 
 if __name__ == '__main__':
@@ -13,7 +12,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-p", "--process", help="Process name")
-    parser.add_argument("-l", "--list", help="List processes"),
+    parser.add_argument("-l", "--list", help="List processes",
+                        action="store_true"),
     parser.add_argument("-c", "--config", help="Config file for process")
 
     processes = {
@@ -24,6 +24,11 @@ if __name__ == '__main__':
     }
 
     args = parser.parse_args()
+
+    if args.list:
+        print("Available processes:")
+        [print("\t", k) for k, v in processes.items()]
+        sys.exit(0)
 
     try:
         process = processes[args.process]
