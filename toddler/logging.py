@@ -37,11 +37,18 @@ default_logging_conf = {
 def setup_logging(logger=None, logger_name=None, config="logging.json",
                   env_key="TODDLER_LOGGING_CONF"):
     """
+    === Logger setup ===
+
+    Configure logging in two ways
+    - Pass logger directly
+    - Or pass config file in json or yaml, config file should be formatted
+    according to (this documentation)[https://docs.python.org/3.4/library/logging.config.html#configuration-dictionary-schema]
+
     Sets up logging for this process
     :param logger: optional logger that will be used by manager
     :param logger_name: name of the logger
     :param config: configuration for the logger @see logging.config.dictConfig
-     https://docs.python.org/3.4/library/logging.config.html#configuration-dictionary-schema
+
     :return logging.Logger:
     """
 

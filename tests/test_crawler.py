@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone, timedelta
 
 
-class Crawler(unittest.TestCase):
+class TestCrawler(unittest.TestCase):
     
     def test_crawler(self):
         

@@ -3,9 +3,8 @@ __author__ = 'michal'
 import pika
 from toddler import exceptions
 import ujson
-from toddler import logging as t_logging
-import asyncio
-from concurrent.futures import ThreadPoolExecutor, Future, ProcessPoolExecutor
+from concurrent.futures import Future
+from concurrent.futures.thread import ThreadPoolExecutor
 import time
 from mongoengine import connect
 
@@ -29,22 +28,6 @@ class RequeueMessage(Exception):
 class BaseManager(object):
     """Base Manager class"""
 
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-    def process_task_async(self, msg, loop=None):
-        
-        result = loop.run_in_executor(
-            None,
-            self.process_task,
-            msg
-        )
-        
-        return result
-
     def process_task(self, msg):
         """
 
@@ -54,22 +37,7 @@ class BaseManager(object):
         :param msg:
         :return:
         """
-        
         raise NotImplemented
-
-
-class _TaskRunnerDataProtocol(asyncio.SubprocessProtocol):
-    
-    def __init__(self, exit_future: asyncio.Future):
-        
-        self.exit_future = exit_future
-        self.output = bytearray()
-        
-    def pipe_data_received(self, fd, data):
-        self.output.extend(data)
-        
-    def process_exited(self):
-        self.exit_future.set_result(self.output)
 
 
 class RabbitManager(BaseManager):
@@ -77,10 +45,11 @@ class RabbitManager(BaseManager):
 
     """
     def __init__(self, rabbitmq_url=None, queue=None, routing_key=None,
-                 exchange=None, exchange_type=None, config=None, log=None):
+                 exchange="message", exchange_type="direct", log=None,
+                 max_tasks=3):
         """
 
-        # Config dict structure (case adjusted to json configuration):
+        == Config dict structure (case adjusted to json configuration):
         {
             "rabbit": {
                 "url": "apmq://rabbit",
@@ -103,62 +72,29 @@ class RabbitManager(BaseManager):
         :return:
         """
 
+        if queue is None:
+            raise exceptions.NotConfigured("Misssing queue")
+
         self._connection = None
         self._channel = None
         self._closing = False
         self._consumer_tag = None
-        self._config = config
-        self._max_tasks = 3  # 2 cores + 1
+        self._max_tasks = max_tasks  # 2 cores + 1
         self._tasks_number = 0
-        self._executor = ThreadPoolExecutor(max_workers=3)
+        self._executor = ThreadPoolExecutor(max_workers=self._max_tasks)
+        self._max_tasks_warning_counter = 0
 
-        try:
-            if rabbitmq_url is None:
-                self._rabbitmq_url = config['rabbit']['url']
-            else:
-                self._rabbitmq_url = rabbitmq_url
+        self._rabbitmq_url = rabbitmq_url
+        self._queue = queue
+        self._routing_key = routing_key
+        self._exchange = exchange
+        self._exchange_type = exchange_type
 
-            if queue is None:
-                self._queue = config['rabbit']['queue']
-            else:
-                self._queue = queue
-
-            if routing_key is None:
-                self._routing_key = config['rabbit']['routingKey']
-            else:
-                self._routing_key = routing_key
-
-            if exchange is None:
-                try:
-                    self._exchange = config['rabbit']['exchange']
-                except KeyError:
-                    # setting defaults
-                    self._exchange = "message"
-            else:
-                self._exchange = exchange
-
-            if exchange_type is None:
-                try:
-                    self._exchange_type = config['rabbit']['exchangeType']
-                except KeyError:
-                    # setting defaults
-                    self._exchange_type = "direct"
-            else:
-                self._exchange_type = exchange_type
-        except (KeyError, TypeError) as e:
-            raise exceptions.NotConfigured(str(e))
         if log is None:
-            try:
-                log_config = self._config['logging']
-                self.log = t_logging.setup_logging(log,
-                                                   self.__class__.__name__,
-                                                   log_config)
-            except (KeyError, TypeError):
-                log_config = None
+            from toddler.logging import setup_logging
+            self.log = setup_logging()
         else:
             self.log = log
-
-
 
     def reconnect(self):
         """Will be run by IOLoop.time if the connection is closed.
@@ -354,6 +290,7 @@ class RabbitManager(BaseManager):
     def run(self):
         """Run consumer"""
 
+        self.log("Running consumer")
         c = self.connect()
         """:type: pika.SelectConnection"""
         c.ioloop.start()
@@ -392,4 +329,4 @@ class RabbitManagerWithMongoDb(RabbitManager):
         super(RabbitManagerWithMongoDb, self).__init__(*args, **kwargs)
 
     def _connect_mongodb(self):
-        connect(self._mongodb_url)
+        connect(host=self._mongodb_url)

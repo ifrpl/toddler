@@ -165,5 +165,5 @@ class BaseContentProcessor(object):
 
         for element_name, pipe in self.config.items():
             elements = reduce(self.parse_command, pipe, stream)
-            document.content[element_name] = elements
+            document.features[element_name] = elements
         return document

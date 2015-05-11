@@ -175,12 +175,18 @@ class TestAnalyser(TestCase):
             }
         ]
 
+        exports = {
+            'nimbusview': {
+                "push_api_url": "http://banshee.hosting.lan.ifresearch:1402/"
+            }
+        }
+
         host = {
             "host": "example.com",
             "block": False,
             "block_date": "2015-02-02T14:23:12+00:00",
             "number_of_documents": 3434,
-            "config": {"analysisConfig": config},
+            "config": {"analysisConfig": config, "exports": exports},
             "ignore_robots": False,
             "robots_txt": RobotsTxt(**{
                 "status": "downloaded",
@@ -201,9 +207,18 @@ class TestAnalyser(TestCase):
             with mock.patch("toddler.analyser.Analyser.send_message")\
                     as send_message:
 
-                send_message.return_value = True
-                self.analyser.process_task(
-                    ujson.dumps(self.request).encode('utf8')
-                )
-                self.assertTrue(send_message.called)
+                with mock.patch("requests.Session.send") as send:
+
+                    send.return_value = True
+
+                    send_message.return_value = True
+
+                    self.analyser.process_task(
+                        ujson.dumps(self.request).encode('utf8')
+                    )
+                    self.assertIn(b"http://example.com",
+                                  send.call_args[0][0].body)
+                    # send message not called, as we are not pushing to
+                    # rabbit anymore
+                    self.assertFalse(send_message.called)
 

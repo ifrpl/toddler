@@ -4,11 +4,12 @@ from toddler.contentprocessors import soup
 from toddler import Document
 import json
 
+
 class SoupContentProcessorTest(unittest.TestCase):
 
-    def testProcessor(self):
+    def setUp(self):
 
-        html = """
+        self.html = """
         <html>
         <head>
             <meta property="og:title" content="open graph title"/>
@@ -52,9 +53,9 @@ class SoupContentProcessorTest(unittest.TestCase):
 
         doc = Document()
 
-        doc.body = html
-
-        options = """
+        doc.body = self.html
+        self.doc = doc
+        self.options = """
             {
                 "feature_1": [
                     {
@@ -146,13 +147,34 @@ class SoupContentProcessorTest(unittest.TestCase):
             }
         """
 
-        processor = soup.SoupContentProcessor(json.loads(options))
-        doc = processor.parse(doc)
+    def test_processor(self):
 
-        self.assertEqual(len(doc.content['feature_1']), 2)
-        self.assertEqual(doc.content['feature_2'][0], "Value2")
-        self.assertEqual(doc.content['feature_3'][0], "Value3")
-        self.assertEqual(doc.content['og_title'][0], "open graph title")
+        processor = soup.SoupContentProcessor(json.loads(self.options))
+        doc = processor.parse(self.doc)
 
-        self.assertEqual(doc.content['table'][1], "789")
+        self.assertEqual(len(doc.features['feature_1']), 2)
+        self.assertEqual(doc.features['feature_2'][0], "Value2")
+        self.assertEqual(doc.features['feature_3'][0], "Value3")
+        self.assertEqual(doc.features['og_title'][0], "open graph title")
 
+        self.assertEqual(doc.features['table'][1], "789")
+
+        def _raises():
+            options = """
+            {
+                "feature_1": [
+                    {
+                        "command": "select",
+                        "arguments": ["p"]
+                    },
+                    {
+                        "command": "magic"
+                    }
+                ]
+            }
+            """
+
+            processor = soup.SoupContentProcessor(json.loads(options))
+            doc = processor.parse(self.doc)
+
+        self.assertRaises(NotImplementedError, _raises)

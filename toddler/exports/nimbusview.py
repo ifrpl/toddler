@@ -20,20 +20,20 @@ def push_document(document: Document, push_api_url, connector="properties"):
 
     fn = lambda x: "PAPI_%s:%s" % (doc_id, x)
 
-    push = {
-        fn("uri"): document.url + "",
-    }
+    push = [(fn("uri"), document.url + "")]
+
 
     def _add_meta(name, val):
         meta_name = lambda x: fn("meta:%s") % x
-        push[meta_name(name)] = ('', val)
+
+        if isinstance(val, list):
+            [push.append((meta_name(name), ('', v))) for v in val]
+        else:
+            push.append((meta_name(name), ('', val)))
 
     [_add_meta(key, val) for key, val in document.features.items()]
 
-    # response_session = requests.get(
-    #     urljoin(papi_url,
-    #             "/papi/4/connectors/%s/get_current_session_id" % connector)
-    # )
+    push.append((fn("part_bytes:master"), ('', document.body, 'text/html')))
 
     response = requests.post(
         papi_url,

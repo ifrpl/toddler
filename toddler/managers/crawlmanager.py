@@ -2,7 +2,6 @@ __author__ = 'michal'
 
 from . import RabbitManager, RequeueMessage
 from . import json_task
-import pymongo
 from addict import Dict
 from urllib import parse, robotparser
 from bs4 import BeautifulSoup
@@ -11,7 +10,6 @@ import functools
 import toddler
 from toddler import send_message_sync
 import ujson
-import dateutil.parser
 import datetime
 from datetime import timedelta
 import base64
@@ -21,6 +19,7 @@ from toddler.models import Host, RobotsTxt, upsert_crawl_document,\
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc)
+
 
 class NoRobotsForHostError(Exception):
     pass
@@ -78,12 +77,15 @@ def can_index_html(html, actions):
         try:
             if tag['name'].lower() == "robots":
                 return " ".join((prev, tag['content'].lower()))
+            else:
+                raise KeyError
         except KeyError:
             return prev
-
-    if "noindex" in functools.reduce(get_robots_content,
-                                     soup.find_all("meta"), ""):
-        return False
+    metas = soup.find_all("meta")
+    if metas is not None:
+        if "noindex" in functools.reduce(get_robots_content,
+                                         metas, ""):
+            return False
     
     return True
 
@@ -96,11 +98,8 @@ def extract_hostname(url):
 
 def has_robots_txt(host: Host):
 
-    try:
-        if host.ignore_robots:
-            return True
-    except KeyError:
-        pass
+    if host.ignore_robots:
+        return True
 
     if host.robots_txt.status is 'none':
         return False
@@ -113,6 +112,38 @@ def has_robots_txt(host: Host):
                 host.robots_txt.expires):
             return False
     return True
+
+
+def retrieve_links(result_url, soup: BeautifulSoup):
+
+    parsed_result_url = parse.urlparse(result_url)
+
+    def _fix_url(url):
+
+        parsed_url = parse.urlparse(url)
+        if parsed_url.hostname is None:
+            return (parsed_result_url.scheme + "://"
+                    + parsed_result_url.hostname + url)
+        else:
+            return url
+
+    accepted_rels = ['alternate', 'first', 'last',
+                             'next', 'prev', 'up']
+
+    for tag in soup.select("a"):
+        try:
+            for rel in tag['rel']:
+                if rel in accepted_rels:
+                    yield _fix_url(tag['href'])
+                    break
+        except KeyError:
+            if tag.name == "a":
+                try:
+                    if not tag['href'].startswith("#"):
+                        yield _fix_url(tag['href'])
+                except KeyError:
+                    pass
+
 
 
 class CrawlManager(RabbitManager):
@@ -133,7 +164,7 @@ class CrawlManager(RabbitManager):
         super(CrawlManager, self).__init__(*args, **kwargs)
         
     def _connect_mongo(self):
-        mongo_connect(self._mongo_url)
+        mongo_connect(host=self._mongo_url)
 
     def send_message(self, msg, exchange):
         
@@ -147,12 +178,6 @@ class CrawlManager(RabbitManager):
 
         return Host.objects(host=hostname).first()
 
-    def update_host(self, hostname, data):
-        if self._mongo is None:
-            self._connect_mongo()
-            
-        self._mongo.crawl.host.update_one({"host": hostname}, data)
-        
     def get_host_by_result(self, crawl_result: Dict):
         return self.get_host(extract_hostname(crawl_result.url))
 
@@ -167,9 +192,7 @@ class CrawlManager(RabbitManager):
         if "nofollow" in crawl_result.actions:
             raise StopIteration
         
-        parsed_result_url = parse.urlparse(crawl_result.url)
-        host = self.get_host(parsed_result_url.hostname)
-        
+        host = self.get_host_by_result(crawl_result)
         if not has_robots_txt(host):
             raise NoRobotsForHostError
         
@@ -179,37 +202,8 @@ class CrawlManager(RabbitManager):
             if meta_tag['name'].lower() == "robots":
                 if "nofollow" in meta_tag['content'].lower():
                     raise StopIteration
-        
-        links = []
-        
-        def _fix_url(url):
-            
-            parsed_url = parse.urlparse(url)
-            if parsed_url.hostname is None:
-                return (parsed_result_url.scheme + "://" 
-                        + parsed_result_url.hostname + url)
-            else:
-                return url
-        
-        def _append_link(tag):
-            
-            accepted_rels = ['alternate', 'first', 'last',
-                             'next', 'prev', 'up']
-            
-            try:
-                if tag['rel'] in accepted_rels:
-                    links.append(_fix_url(tag['href']))
-            except KeyError:
-                if tag.name == "a":
-                    try:
-                        if not tag['href'].startswith("#"):
-                            links.append(_fix_url(tag['href']))
-                    except KeyError:
-                        pass
-        
-        [_append_link(tag) for tag in soup.select("a")]
-        
-        for url in links:
+
+        for url in retrieve_links(crawl_result.url, soup):
             actions = match_url_patterns(url, host.config['crawlConfig'])
             
             if "index" in actions or "follow" in actions:
@@ -226,7 +220,7 @@ class CrawlManager(RabbitManager):
     def can_fetch(self, host, url):
 
         if not has_robots_txt(host):
-            raise NoRobotsForHostError
+            return True
         
         user_agent = host.user_agent or self._user_agent
 
@@ -320,7 +314,7 @@ class CrawlManager(RabbitManager):
             _upsert()
             self.send_message(crawl_request, "CrawlRequest")
         else:
-            with HostLock(extract_hostname(crawl_request.host)):
+            with HostLock(extract_hostname(crawl_request['url'])):
                 # add document handling
                 _upsert()
                 self.send_message(crawl_request, "CrawlRequest")
