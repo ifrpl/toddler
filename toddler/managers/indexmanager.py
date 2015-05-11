@@ -6,14 +6,23 @@ from . import crawlmanager
 
 
 class IndexManager(RabbitManager):
-
-
     def __init__(self, mongo_url, *args, **kwargs):
+        """
+        = Index Manager =
+
+        Gets document from rabbitmq and writes it to MongoDB
+
+        Configuration parameters:
+        :param mongo_url: Url to mongodb
+        :param rabbitmq_url: Url to rabbitmq
+        -
+        """
         self.mongo_url = mongo_url
         connect(mongo_url)
         super(IndexManager, self).__init__(*args, **kwargs)
 
     def delete_document(self, index_task):
+
         IndexDocument.objects(url=index_task['url']).delete()
 
     def upsert_document(self, index_task):

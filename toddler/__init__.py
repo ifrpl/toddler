@@ -73,16 +73,12 @@ def setup(args):
     """
     global _setup_run_already
 
-    from .logging import setup_logging
-    log = setup_logging()
-
     import argparse
-    import sys
-    log = setup_logging()
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-c", "--config",
                         help="Path to configuration file")
+
     parser.add_argument("-m", "--mongo-url", help="url to mongodb")
 
     if len(args) > 0:
@@ -91,7 +87,13 @@ def setup(args):
         parsed_args = parser.parse_args()
 
     if parsed_args.config:
-        log.info("Parsing configuration in file: {}".format(parsed_args.config))
+
+        from .logging import setup_logging
+        log = setup_logging()
+
+        log.info(
+            "Parsing configuration in file: {}".format(parsed_args.config)
+        )
         config.config = config.read_config_file(parsed_args.config)
 
     if parsed_args.mongo_url:

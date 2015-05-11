@@ -33,6 +33,7 @@ class _LogPatch(object):
         self.error = log_inst.error
         self.error.return_value = None
 
+
 def patch_logs(func):
 
     @wraps(func)
@@ -46,7 +47,7 @@ def patch_logs(func):
 
 class TestRabbitManager(TestCase):
 
-    @mock.patch("concurrent.futures.thread.ThreadPoolExecutor")
+    @mock.patch("toddler.managers.ThreadPoolExecutor")
     @patch_logs
     def test_instantiation(self, log, executor):
 
@@ -65,7 +66,6 @@ class TestRabbitManager(TestCase):
         rm = RabbitManager("ampq://fliv", "TestQueue", log=log2)
         self.assertEqual(rm.log, log2)
 
-    @mock.patch("toddler.logging.setup_logging")
     @mock.patch("toddler.managers.RabbitManager.requeue_message")
     @mock.patch("toddler.managers.RabbitManager.acknowledge_message")
     @mock.patch("concurrent.futures.ThreadPoolExecutor")

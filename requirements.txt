@@ -12,3 +12,5 @@ mongoengine
 mongomock
 blinker
 PyYaml
+colored-traceback
+colorama

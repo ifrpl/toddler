@@ -19,6 +19,7 @@ class GeneralTests(TestCase):
             tmp_file.write("test: 123")
             tmp_file.close()
             argv = ['-c', '{}'.format(tmp_file.name)]
+            decorators._reset_already_run(setup)
             setup(argv)
 
             self.assertEqual(config.config.test, 123)
@@ -54,6 +55,22 @@ class GeneralTests(TestCase):
 
             self.assertTrue(connect.called)
             self.assertEqual(connect.call_args[0][0], "mongodb://localhost")
+
+    def test_already_run(self):
+
+        @decorators.run_only_once(True)  # should not raise exception
+        def test():
+            return 1
+
+        self.assertEqual(test(), 1)
+        self.assertEqual(test(), None)
+
+        @decorators.run_only_once
+        def test2():
+            return 2
+
+        self.assertEqual(test2(), 2)
+        self.assertRaises(SystemError, test2)
 
 
     def test_document_object(self):

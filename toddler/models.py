@@ -1,6 +1,6 @@
 __author__ = 'michal'
 import datetime
-from mongoengine import connect, Document, StringField, \
+from mongoengine import connect as mongo_connect, Document, StringField, \
     DateTimeField, IntField, DictField, BooleanField, EmbeddedDocument,\
     EmbeddedDocumentField, URLField, DynamicDocument, signals
 
@@ -10,6 +10,12 @@ __all__ = ['RobotsTxt', 'Host', 'connect', 'upsert_crawl_document', 'hash_url']
 
 from functools import reduce
 from hashlib import md5
+from .decorators import run_only_once
+
+
+@run_only_once(True)
+def connect(*args, **kwargs):
+    mongo_connect(*args, **kwargs)
 
 
 def handler(event):
