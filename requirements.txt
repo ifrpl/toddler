@@ -1,16 +1,1 @@
-lxml
-BeautifulSoup4
-aiohttp
-python-dateutil
-python3-pika
-requests
-addict
-pymongo
-reppy
-ujson
-mongoengine
-mongomock
-blinker
-PyYaml
-colored-traceback
-colorama
+-e .

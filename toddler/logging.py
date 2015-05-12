@@ -63,6 +63,9 @@ def setup_logging(logger=None, logger_name=None, config="logging.json",
                         config = ujson.load(config_file)
                     elif config.endswith(".yaml"):
                         config = yaml.load(config_file.read())
+            except TypeError:
+                if isinstance(config, dict):
+                    config = config
             except (FileNotFoundError, IOError):
                 config = default_logging_conf
 

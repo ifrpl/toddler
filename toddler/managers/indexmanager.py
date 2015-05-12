@@ -18,7 +18,7 @@ class IndexManager(RabbitManager):
         -
         """
         self.mongo_url = mongo_url
-        connect(mongo_url)
+        connect(host=mongo_url)
         super(IndexManager, self).__init__(*args, **kwargs)
 
     def delete_document(self, index_task):

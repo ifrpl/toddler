@@ -1,5 +1,5 @@
 __author__ = 'michal'
-__version__ = "0.1.0"
+__version__ = "0.0.1"
 
 import ujson as json
 from . import utils
@@ -57,9 +57,10 @@ class Document(object):
 _setup_run_already = False
 
 from .decorators import run_only_once
+import argparse
 
 @run_only_once
-def setup(args):
+def setup(args=[], argument_parser: argparse.ArgumentParser = None):
     """
     = Setup =
 
@@ -69,17 +70,28 @@ def setup(args):
 
     This function can be run only once, otherwise will raise an exception
 
-    :return:
+    Returns processed args
+
+    :return argparse.NameSpace:
     """
     global _setup_run_already
 
-    import argparse
-    parser = argparse.ArgumentParser()
 
-    parser.add_argument("-c", "--config",
-                        help="Path to configuration file")
+    if argument_parser is None:
+        parser = argparse.ArgumentParser()
+    else:
+        parser = argument_parser
 
-    parser.add_argument("-m", "--mongo-url", help="url to mongodb")
+    try:
+        parser.add_argument("-c", "--config",
+                            help="Path to configuration file")
+    except argparse.ArgumentError:
+        pass
+
+    try:
+        parser.add_argument("-m", "--mongo-url", help="url to mongodb")
+    except argparse.ArgumentParser:
+        pass
 
     if len(args) > 0:
         parsed_args = parser.parse_args(args)
@@ -102,3 +114,4 @@ def setup(args):
 
         connect(parsed_args.mongo_url)
 
+    return parsed_args

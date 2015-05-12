@@ -39,6 +39,14 @@ class BaseManager(object):
         """
         raise NotImplemented
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def __enter__(self):
+
+        return self
+
+
 
 class RabbitManager(BaseManager):
     """Base for managers that connects to rabbit
@@ -46,7 +54,7 @@ class RabbitManager(BaseManager):
     """
     def __init__(self, rabbitmq_url=None, queue=None, routing_key=None,
                  exchange="message", exchange_type="direct", log=None,
-                 max_tasks=3):
+                 max_tasks=3, logging=None):
         """
 
         == Config dict structure (case adjusted to json configuration):
@@ -92,7 +100,10 @@ class RabbitManager(BaseManager):
 
         if log is None:
             from toddler.logging import setup_logging
-            self.log = setup_logging()
+            if logging is not None:
+                self.log = setup_logging(config=logging)
+            else:
+                self.log = setup_logging()
         else:
             self.log = log
 
@@ -134,7 +145,7 @@ class RabbitManager(BaseManager):
         :param str reply_text:
         :return:
         """
-        self.log.warning("Channel to rabbit closed.")
+        self.log.info("Channel to rabbit closed.")
         self._connection.close()
 
     def on_channel_open(self, channel):
@@ -290,7 +301,7 @@ class RabbitManager(BaseManager):
     def run(self):
         """Run consumer"""
 
-        self.log("Running consumer")
+        self.log.info("Running consumer")
         c = self.connect()
         """:type: pika.SelectConnection"""
         c.ioloop.start()
@@ -304,9 +315,15 @@ class RabbitManager(BaseManager):
         self._closing = True
         self.stop_consuming()
         self._executor.shutdown(True)
-        self._connection.ioloop.start()
+        if self._connection is not None:
+            self._connection.ioloop.start()
         self.log.info("Stopped")
-        
+
+    def __exit__(self, *args, **kwargs):
+
+        self.stop()
+        super(RabbitManager, self).__exit__(*args, **kwargs)
+
 
 class RabbitManagerWithMongoDb(RabbitManager):
 
