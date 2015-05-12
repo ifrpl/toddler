@@ -19,7 +19,6 @@ requirements = [
     "pymongo==2.8",
     "python-dateutil==2.4.0",
     "python3-pika==0.9.14",
-    "reppy==0.3.0",
     "requests==2.5.1",
     "sentinels==0.0.6",
     "six==1.9.0",
