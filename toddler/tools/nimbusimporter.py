@@ -1,5 +1,5 @@
 __author__ = 'michal'
-
+__version__ = "0.1.0"
 from toddler.models import IndexDocument
 from mongoengine import connect
 from toddler.imports import nimbusview
@@ -8,7 +8,10 @@ from toddler.logging import setup_logging
 
 
 def main():
-
+    """
+    NimbusImporter v.0.1.0
+    :return:
+    """
     log = setup_logging()
 
     parser = argparse.ArgumentParser()

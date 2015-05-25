@@ -34,6 +34,6 @@ setup(
     url="https://bitbucket.org/michalmazurek/toddler/",
     include_package_data=True,
     packages=find_packages(exclude=['tests']),
-    scripts=['bin/toddler-run'],
+    scripts=['bin/toddler-run', 'bin/toddler-tools'],
     install_requires=requirements
 )

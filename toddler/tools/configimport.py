@@ -1,15 +1,27 @@
 __author__ = 'michal'
-__version__ = "0.1"
+__version__ = "0.1.0"
 
 import argparse
 from toddler import setup
 from colorama import Fore, Style
 
+__all__ = ['main']
 
 def main(*argv):
+    """
+    = Configuration import =
 
+    check "--help"
 
-    parser = argparse.ArgumentParser(argv)
+    Run command: python -m toddler.tools.configimport
+
+    :param argv:
+    :return:
+    """
+    parser = argparse.ArgumentParser(
+        argv,
+        description="ConfigImport v{}".format(__version__)
+    )
 
     parser.add_argument("-t", "--type", help="Config type",
                         choices=['crawl'])
@@ -42,4 +54,4 @@ def main(*argv):
 
 if __name__ == '__main__':
     import sys
-    main(sys.argv[1:])
+    main(*sys.argv[1:])

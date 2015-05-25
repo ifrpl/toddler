@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+TOOL_NAME=$1
+shift
+ARGS=$@
+
+if [ -f $TODDLER_ENV/bin/activate ]
+then
+    source $TODDLER_ENV/bin/activate
+fi
+
+if [ -z $TOOL_NAME ] ; then
+    TOOL_NAME="list"
+fi
+
+python -m "toddler.tools.$TOOL_NAME" $ARGS
