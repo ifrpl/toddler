@@ -60,7 +60,8 @@ from .decorators import run_only_once
 import argparse
 
 @run_only_once
-def setup(args=[], argument_parser: argparse.ArgumentParser = None):
+def setup(args=list(), argument_parser: argparse.ArgumentParser=None,
+          do_not_parse_config=False):
     """
     = Setup =
 
@@ -88,6 +89,10 @@ def setup(args=[], argument_parser: argparse.ArgumentParser = None):
     except argparse.ArgumentError:
         pass
 
+    parser.add_argument("--no-color", default=False, action="store_true",
+                        help="Disable colors")
+
+
     try:
         parser.add_argument("-m", "--mongo-url", help="url to mongodb")
     except argparse.ArgumentParser:
@@ -98,7 +103,12 @@ def setup(args=[], argument_parser: argparse.ArgumentParser = None):
     else:
         parsed_args = parser.parse_args()
 
-    if parsed_args.config:
+    if not parsed_args.no_color:
+        from colorama import init
+        init(autoreset=True)
+
+
+    if parsed_args.config and not do_not_parse_config:
 
         from .logging import setup_logging
         log = setup_logging()

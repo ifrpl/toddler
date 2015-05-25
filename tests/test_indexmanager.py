@@ -1,15 +1,14 @@
 __author__ = 'michal'
 from unittest import TestCase, mock
 from mongomock import Connection
-
 mongo_patcher = mock.patch("pymongo.MongoClient")
 mock_mongo_client = mongo_patcher.start()
 mock_mongo_client.return_value = Connection()
 from toddler.managers.indexmanager import IndexManager
-from toddler.models import IndexDocument
 from addict import Dict
 import ujson
 from toddler.managers.crawlmanager import now
+
 
 class IndexManagerTests(TestCase):
 

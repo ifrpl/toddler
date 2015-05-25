@@ -1,6 +1,10 @@
 __author__ = 'michal'
 
-from unittest import TestCase
+from unittest import TestCase, mock
+from mongomock import Connection
+mongo_patcher = mock.patch("pymongo.MongoClient")
+mock_mongo_client = mongo_patcher.start()
+mock_mongo_client.return_value = Connection()
 from toddler.imports.nimbuscrawl import get_configuration, convert_regexp,\
     extract_hostname
 
@@ -126,13 +130,7 @@ class TestConfigImport(TestCase):
             )
         )
 
-    def test_rule_extraction(self):
-        hosts = get_configuration(self.example_xml)
-
-        self.assertIn("www.lesiteimmo.com", hosts)
-
-        self.assertEqual(len(hosts['www.lesiteimmo.com']), 6)
-        patterns = hosts['www.lesiteimmo.com']
+    def pattern_asserts(self, patterns):
         self.assertEqual(
             patterns[2]['actions'],
             ["index", "follow", "accept"]
@@ -157,3 +155,37 @@ class TestConfigImport(TestCase):
             patterns[5]['pattern'],
             "http://www\.lesiteimmo\.com/.*alfa-romeo.*"
         )
+
+    def test_rule_extraction(self):
+        hosts = get_configuration(self.example_xml)
+
+        self.assertIn("www.lesiteimmo.com", hosts)
+
+        self.assertEqual(len(hosts['www.lesiteimmo.com']), 6)
+        patterns = hosts['www.lesiteimmo.com']
+        self.pattern_asserts(patterns)
+
+    @mock.patch("builtins.open")
+    def test_configimport_script(self, mock_open):
+
+        argv = ['--config', 'test.xml', "--type", "crawl", "--mongo-url",
+                "mongodb://localhost/test"]
+
+        import io
+        def fopen(*args, **kwargs):
+            return io.StringIO(self.example_xml)
+
+        mock_open.side_effect = fopen
+
+        from toddler.tools.configimport import main
+        from toddler.models import Host
+
+        main(*argv)
+
+        host = Host.objects(host="www.lesiteimmo.com").first()
+        """:type: Host"""
+        self.assertEqual(host.host, "www.lesiteimmo.com")
+        self.assertGreater(len(host.config['crawlConfig']), 0)
+
+        self.pattern_asserts(host.config['crawlConfig'])
+

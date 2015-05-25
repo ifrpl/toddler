@@ -7,7 +7,10 @@ __all__ = ['run_only_once', 'has_been_run']
 
 def _set_already_run_flag(func):
     setattr(func, '_already_run', True)
-    setattr(func, '_last_call_trace', ''.join(traceback.format_stack()))
+    try:
+        setattr(func, '_last_call_trace', ''.join(traceback.format_stack()))
+    except TypeError:
+        pass
 
 
 def run_only_once(arg):
