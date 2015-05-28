@@ -152,8 +152,11 @@ class CrawlManager(RabbitManager):
         
         self._mongo_url = mongo_url
         """:type: pymongo.MongoClient"""
-        
-        self._user_agent = "Toddler/" + toddler.__version__
+
+        if 'user_agent' in kwargs:
+            self._user_agent = kwargs['user_agent']
+        else:
+            self._user_agent = "Toddler/" + toddler.__version__
 
         self._connect_mongo()
         try:

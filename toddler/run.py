@@ -3,6 +3,8 @@ __author__ = 'michal'
 from .managers import crawlmanager, indexmanager
 from .crawler import Crawler
 from .analyser import Analyser
+from .scheduler import Scheduler
+
 from . import config
 from . import setup
 import argparse
@@ -29,7 +31,8 @@ if __name__ == '__main__':
         "Crawler": Crawler,
         "Analyser": Analyser,
         "CrawlManager": crawlmanager.CrawlManager,
-        "IndexManager": indexmanager.IndexManager
+        "IndexManager": indexmanager.IndexManager,
+        "Scheduler": Scheduler,
     }
 
     args = setup(argument_parser=parser)

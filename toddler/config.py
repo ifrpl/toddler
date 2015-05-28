@@ -45,8 +45,12 @@ def parse_config_dir(config_path):
 def push_configuration_for_host(host, config, key=None):
 
     from .models import Host
+    from mongoengine.errors import DoesNotExist
 
     host = Host.objects(host=host).first()
+
+    if host is None:
+        raise DoesNotExist
 
     if key is None:
         host.config = config

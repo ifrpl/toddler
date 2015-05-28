@@ -4,7 +4,7 @@ graph LR
     WebApp-- CrawlRequest -->CrawlRequestQueue
     CrawlRequestQueue---RabbitMQ
     CrawlResultQueue---RabbitMQ
-    CrawlTaskQueue---RabbitMQ
+    CreawlRequestQueue---RabbitMQ
     IndexTaskQueue---RabbitMQ
     AnalysisTaskQueue---RabbitMQ
     AnalysisResultQueue---RabbitMQ
@@ -12,11 +12,11 @@ graph LR
     RabbitMQ-- CrawlResult -->CrawlManager
     RabbitMQ-- AnalysisResult -->CrawlManager
     RabbitMQ-- IndexTask -->IndexManager
-    CrawlManager-- CrawlTask -->CrawlTaskQueue
+    CrawlManager-- CreawlRequest -->CreawlRequestQueue
     CrawlManager-- AnalysisTask -->AnalysisTaskQueue
     CrawlManager-- IndexTask -->IndexTaskQueue
-    RabbitMQ-- CrawlTask -->Crawler1
-    RabbitMQ-- CrawlTask -->Crawler1..N
+    RabbitMQ-- CreawlRequest -->Crawler1
+    RabbitMQ-- CreawlRequest -->Crawler1..N
     Crawler1-- CrawlResult -->CrawlResultQueue
     Crawler1..N-- CrawlResult -->CrawlResultQueue
     RabbitMQ-- AnalysisTask -->Analyser1

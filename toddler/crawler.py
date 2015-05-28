@@ -37,9 +37,8 @@ def match_url_patterns(url, config_patterns):
 
 class Crawler(RabbitManager):
 
-    def __init__(self, crawl_result_routing_key="CrawlResult", **kwargs):
+    def __init__(self, *args, **kwargs):
 
-        self._crawl_result_routing_key = crawl_result_routing_key
 
         super(Crawler, self).__init__(**kwargs)
 
@@ -111,5 +110,6 @@ class Crawler(RabbitManager):
         toddler.send_message_sync(
             self._rabbitmq_url,  # this is the rabbit url
             ujson.dumps(result.to_dict()),
-            routing_key=self._crawl_result_routing_key
+            exchange=self._exchange,
+            routing_key=self._routing_key
         )

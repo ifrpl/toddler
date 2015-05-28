@@ -1,0 +1,24 @@
+rabbitmq_url: ampq://user:pass@localhost/toddler
+queue: CrawlRequestQueue
+routing_key: CrawlResult
+exchange: CrawlResult
+logging:
+  raiseException: True # set to false for production
+  version: 1
+  formatters:
+    simple:
+      format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: DEBUG
+      formatter: simple
+      stream: ext://sys.stdout
+  loggers:
+    simpleExample:
+      level: DEBUG
+      handlers: [console]
+      propagate: no
+  root:
+    level: DEBUG
+    handlers: [console]
