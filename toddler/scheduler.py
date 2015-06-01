@@ -83,3 +83,9 @@ class Scheduler(object):
                 self.log.exception(e)
                 reload_counter += 1
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+
+        for p in self.scheduler.queue:
+            self.scheduler.cancel(p)
+
+
