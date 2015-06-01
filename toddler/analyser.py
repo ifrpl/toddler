@@ -52,5 +52,7 @@ class Analyser(RabbitManagerWithMongoDb):
                 host['config']['exports']['nimbusview']['push_api_url']
             )
         except KeyError:
-            self.send_message(ujson.dumps(index_task))
+            # self.send_message(docu)
+            # should send it to indexmanager
+            pass
 
