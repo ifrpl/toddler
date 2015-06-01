@@ -13,11 +13,21 @@ import ujson
 
 class Scheduler(object):
 
-    def __init__(self, rabbit_url, exchange, routing_key, **kwargs):
-        self.rabbit_url = rabbit_url
+    def __init__(self, rabbitmq_url, exchange, routing_key, logging=None, log=None, **kwargs):
+        self.rabbitmq_url = rabbitmq_url
         self.exchange = exchange
         self.routing_key = routing_key
         self.scheduler = scheduler(time.time, time.sleep)
+
+        if log is None:
+            from toddler.logging import setup_logging
+            if logging is not None:
+                self.log = setup_logging(config=logging)
+            else:
+                self.log = setup_logging()
+        else:
+            self.log = log
+
         pass
 
     def schedule_crawl(self, host):
@@ -41,9 +51,8 @@ class Scheduler(object):
 
             host.last_crawl_job_date = datetime.utcnow()
             host.save()
-
             request = ujson.dumps(request)
-            send_message_sync(self.rabbit_url, request, exchange=self.exchange,
+            send_message_sync(self.rabbitmq_url, request, exchange=self.exchange,
                               routing_key=self.routing_key)
 
     def schedule_jobs_for_hosts(self):
@@ -52,12 +61,25 @@ class Scheduler(object):
             if (host.last_crawl_job_date is None
                     or host.last_crawl_job_date >=
                         datetime.utcnow()+timedelta(1)):
+                self.log.info("Scheduling crawl of root for {}".format(
+                    host.host
+                ))
                 self.schedule_crawl(host)
 
         self.scheduler.enter(3600, 3, self.schedule_jobs_for_hosts)
 
     def run(self):
-
-        self.schedule_jobs_for_hosts()
-        self.scheduler.run(True)
+        reload_counter = 0
+        max_reload = 10
+        self.log.info("Starting up scheduler.")
+        while reload_counter < max_reload:
+            try:
+                self.schedule_jobs_for_hosts()
+                self.scheduler.run(True)
+            except KeyboardInterrupt:
+                self.log.info("Shutting down Scheduler")
+                break
+            except Exception as e:
+                self.log.exception(e)
+                reload_counter += 1
 
