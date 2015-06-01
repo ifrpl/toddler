@@ -122,6 +122,6 @@ def setup(args=list(), argument_parser: argparse.ArgumentParser=None,
 
         from .models import connect
 
-        connect(parsed_args.mongo_url)
+        connect(host=parsed_args.mongo_url)
 
     return parsed_args
