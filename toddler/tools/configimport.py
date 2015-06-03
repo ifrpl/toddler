@@ -34,14 +34,15 @@ def main(*argv):
     print(Style.DIM + Fore.BLUE + "ConfigImport v{}".format(__version__))
 
     with open(args.config) as config_file:
-        print(Fore.BLUE+"Opened file:"+Fore.RESET+" {}".format(args.config))
+        print(Fore.BLUE+"Opened file:"+Fore.RESET+" {}".format(args.config)
+              + Fore.RESET)
         if args.type == "crawl":
             print(Style.BRIGHT+Fore.BLUE+"Importing crawlConfig")
             from toddler.imports.nimbuscrawl import get_configuration
             from toddler.models import Host
             config_content = config_file.read()
             config = get_configuration(config_content)
-            for host_name, crawl_config in config.items():
+            for host_name, crawl_config in config:
                 host = Host.objects(host=host_name).first()
                 if host is None:
                     host = Host(host=host_name)

@@ -8,6 +8,12 @@ mock_mongo_client.return_value = Connection()
 from toddler.imports.nimbuscrawl import get_configuration, convert_regexp,\
     extract_hostname
 
+def convert_to_dict(list_of_tuples):
+    d = {}
+    for (key, val) in list_of_tuples:
+        d[key] = val
+
+    return d
 
 class TestConfigImport(TestCase):
     def setUp(self):
@@ -52,6 +58,53 @@ class TestConfigImport(TestCase):
                     </Rules>
                 </Crawler>
         </CrawlConfig>"""
+
+        self.other_xml = """
+            <CrawlConfig xmlns="exa:com.exalead.mercury.mami.crawl.v20" version="1427816334089" verbose="false">
+                <Crawler name="properties" fetcher="properties_fetcher" crawlerServer="exa4" buildGroup="bg0" storeTextOnly="false" nthreads="20" aggressive="false" throttleTimeMS="2500" ignoreRobotsTxt="false" enableConvertProcessor="false" nearDuplicateDetector="true" patternsDetector="true" crawlSitemaps="true" disableConditionalGet="false" defaultAccept="false" defaultIndex="false" defaultFollow="false" defaultFollowRoots="true" enableSimpleSiteCollapsing="false" simpleSiteCollapsingDepth="0" mimeTypesMode="exclude" indexRedirectSources="true" smartRefresh="true" smartRefreshMinAgeS="86400" smartRefreshMaxAgeS="604800">
+                    <Rules key="auto" group="fasilannonce">
+                       <Rule>
+                        <And xmlns="exa:com.exalead.actionrules.v21">
+                         <Host val="\.\+.fasilannonce.fr" norm="norm" litteral="true"/>
+                         <Or>
+                          <Path val="/vente/" norm="norm" litteral="true"/>
+                          <Path val="/location/" norm="norm" litteral="true"/>
+                         </Or>
+                         <Or>
+                          <Atom field="url" kind="inside" norm="none" value="/266-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/267-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/319-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/338-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/339-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/340-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/402-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/403-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/404-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/466-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/467-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/468-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/530-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/531-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/532-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/594-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/595-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/596-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/658-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/659-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/660-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/722-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/723-" litteral="true"/>
+                          <Atom field="url" kind="inside" norm="none" value="/724-" litteral="true"/>
+                         </Or>
+                        </And>
+                        <Index/>
+                        <Follow/>
+                        <Accept/>
+                       </Rule>
+                    </Rules>
+                </Crawler>
+            </CrawlConfig>
+        """
 
     def test_hostname_extraction(self):
 
@@ -158,7 +211,7 @@ class TestConfigImport(TestCase):
 
     def test_rule_extraction(self):
         hosts = get_configuration(self.example_xml)
-
+        hosts = convert_to_dict(hosts)
         self.assertIn("www.lesiteimmo.com", hosts)
 
         self.assertEqual(len(hosts['www.lesiteimmo.com']), 6)

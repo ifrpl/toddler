@@ -7,6 +7,7 @@ __author__ = 'michal'
 from bs4 import BeautifulSoup, Tag
 import re
 from functools import reduce
+from ..logging import setup_logging
 
 
 def extract_hostname(regexp):
@@ -70,7 +71,7 @@ def convert_regexp(regexp, hostname=None):
     return converted
 
 
-def get_configuration(xml_string):
+def get_configuration(xml_string, log=None):
     """
     == Configuration importing ==
     This functions converts xml to toddler configuration, well not exactly
@@ -93,12 +94,19 @@ def get_configuration(xml_string):
     :return dict:
     """
 
-    soup = BeautifulSoup(xml_string, ['lxml', 'xml'])
+    if log is None:
+        log = setup_logging()
 
+    log.info("Starting to process xml file: {} bytes".format(len(xml_string)))
+    soup = BeautifulSoup(xml_string, ['lxml', 'xml'])
+    log.info("Finished processing xml file.")
     result_dict = {}
     actions = ('index', 'follow', 'accept', 'nofollow', 'noindex')
     for rules_tag in soup.find_all("Rules"):
-
+        try:
+            log.info("Processing Rules: {}".format(rules_tag['group']))
+        except KeyError:
+            continue
         order = 1
 
         def convert_to_dict(rule_tag: Tag):
@@ -139,11 +147,16 @@ def get_configuration(xml_string):
 
         hostname = None
         unordered_rules = []
+        no_hostname_counter = len(rule_tags)
+
         while len(rule_tags) > 0:
             rule = rule_tags.pop(0)
             extracted_hostname = extract_hostname(rule['pattern'])
             if extracted_hostname is None and hostname is None:
                 rule_tags.append(rule)
+                no_hostname_counter -= 1
+                if no_hostname_counter < 0:
+                    break
                 continue
             else:
                 if extracted_hostname is None and hostname is not None:
@@ -165,8 +178,7 @@ def get_configuration(xml_string):
                 order += 1
             else:
                 unordered_rules.append(rule)
+        if len(ordered_rules) > 0:
+            yield (re.sub("https?://", "", hostname), ordered_rules)
 
-        result_dict[re.sub("https?://", "", hostname)] = ordered_rules
-
-    return result_dict
 

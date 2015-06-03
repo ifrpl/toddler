@@ -71,18 +71,21 @@ def setup_logging(logger=None, logger_name=None, config="logging.json",
 
             logging.config.dictConfig(config)
             log = logging.getLogger(logger_name)
-        except KeyError:
+        except (KeyError, ValueError):
             logging.warning(
                 "Logging not configured for %s" % logger_name
             )
             frame = inspect.currentframe()
             try:
-                next_frame = inspect.getouterframes(frame)[1]
+                next_frame = inspect.getouterframes(frame)
                 frame_info = inspect.getframeinfo(next_frame)
                 logger_name = "Log:%s:%s" % (
                     frame_info.filename,
                     frame_info.function
                 )
+            except TypeError:
+                logger_name = "Unknown"
+                pass
             finally:
                 del frame
             log = logging.getLogger(logger_name or "NotConfiguredLog")
