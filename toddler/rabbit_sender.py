@@ -20,8 +20,6 @@ def send_message_sync(rabbit_url, message, routing_key, exchange=""):
 
     ch = connection.channel()
 
-    ch.confirm_delivery()
-
     if ch.basic_publish(
         exchange=exchange,
         routing_key=routing_key,
@@ -30,9 +28,9 @@ def send_message_sync(rabbit_url, message, routing_key, exchange=""):
             content_type="application/json",
             delivery_mode=1
         )):
-
         connection.close()
     else:
+        connection.close()
         raise ValueError
 
 
