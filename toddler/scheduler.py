@@ -61,7 +61,8 @@ class Scheduler(object):
             last_crawl_job_date = host.last_crawl_job_date
             if last_crawl_job_date is not None:
                 if last_crawl_job_date.tzinfo is None:
-                    last_crawl_job_date.replace(tzinfo=timezone.utc)
+                    last_crawl_job_date = (last_crawl_job_date
+                                           .replace(tzinfo=timezone.utc))
             if (last_crawl_job_date is None
                     or last_crawl_job_date >=
                         (datetime.now(timezone.utc)+timedelta(1))):
