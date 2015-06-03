@@ -43,6 +43,7 @@ def main(*argv):
 
     from mongoengine.errors import DoesNotExist
     import os
+
     if "," in args.host:
         hosts = [name.strip() for name in args.host.split(",")]
     else:
@@ -89,7 +90,6 @@ def main(*argv):
     else:
         value = args.value
     try:
-        hosts = args.host.split(",")
         [push_configuration_for_host(host.strip(), value, args.key)
          for host in hosts]
     except DoesNotExist:
