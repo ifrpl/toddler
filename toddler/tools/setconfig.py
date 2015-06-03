@@ -20,7 +20,7 @@ def main(*argv):
         usage=usage
     )
 
-    parser.add_argument("-h", "--host", help="Hostname to push config",
+    parser.add_argument("-o", "--host", help="Hostname to push config",
                         required=True)
     parser.add_argument("-k", "--key", help="Config key", required=True)
     parser.add_argument("value", type=str)
