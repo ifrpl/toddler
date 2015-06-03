@@ -61,6 +61,8 @@ class Crawler(RabbitManager):
                 raise KeyError
 
             timeout = dateutil.parser.parse(crawl_request.timeout)
+            if timeout.tzinfo is None:
+                timeout = timeout.replace(tzinfo=datetime.timezone.utc)
 
             if datetime.datetime.now(datetime.timezone.utc) <= timeout:
                 raise RequeueMessage
@@ -85,14 +87,14 @@ class Crawler(RabbitManager):
 
         if method == "POST":
             try:
-                req = s.post(crawl_request.url, data=crawl_request.data)
+                req = s.post(str(crawl_request.url), data=crawl_request.data)
             except KeyError:
                 try:
-                    req = s.post(crawl_request.url, json=crawl_request.json)
+                    req = s.post(str(crawl_request.url), json=crawl_request.json)
                 except KeyError:
-                    req = s.post(crawl_request.url)
+                    req = s.post(str(crawl_request.url))
         else:
-            req = s.get(crawl_request.url)
+            req = s.get(str(crawl_request.url))
 
         """:type: requests.Response"""
 
