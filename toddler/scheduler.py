@@ -58,12 +58,12 @@ class Scheduler(object):
     def schedule_jobs_for_hosts(self):
 
         for host in Host.objects:
-            if host.last_crawl_job_date is not None:
-                last_crawl_job_date = host.last_crawl_job_date
+            last_crawl_job_date = host.last_crawl_job_date
+            if last_crawl_job_date is not None:
                 if last_crawl_job_date.tzinfo is None:
                     last_crawl_job_date.replace(tzinfo=timezone.utc)
-            if (host.last_crawl_job_date is None
-                    or host.last_crawl_job_date >=
+            if (last_crawl_job_date is None
+                    or last_crawl_job_date >=
                         (datetime.now(timezone.utc)+timedelta(1))):
                 self.log.info("Scheduling crawl of root for {}".format(
                     host.host
