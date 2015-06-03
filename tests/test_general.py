@@ -11,6 +11,10 @@ import sys
 
 class GeneralTests(TestCase):
 
+    def tearDown(self):
+
+        decorators._reset_already_run(setup)
+
     def test_setup(self):
 
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False)\
@@ -51,10 +55,13 @@ class GeneralTests(TestCase):
         argv = ['-m', "mongodb://localhost"]
 
         with mock.patch("toddler.models.connect") as connect:
+
+            def mock_connect(host=None):
+                self.assertEqual(host, "mongodb://localhost")
+            connect.side_effect = mock_connect
             setup(argv)
 
             self.assertTrue(connect.called)
-            self.assertEqual(connect.call_args[0][0], "mongodb://localhost")
 
     def test_already_run(self):
 

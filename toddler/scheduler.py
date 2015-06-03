@@ -4,7 +4,7 @@ from multiprocessing import managers
 from sched import scheduler
 import time
 from toddler.models import Host
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from .rabbit_sender import send_message_sync
 from .crawler import match_url_patterns
 from .managers import crawlmanager
@@ -60,7 +60,7 @@ class Scheduler(object):
         for host in Host.objects:
             if (host.last_crawl_job_date is None
                     or host.last_crawl_job_date >=
-                        datetime.utcnow()+timedelta(1)):
+                        (datetime.now(timezone.utc)+timedelta(1))):
                 self.log.info("Scheduling crawl of root for {}".format(
                     host.host
                 ))

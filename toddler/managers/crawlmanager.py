@@ -270,7 +270,7 @@ class CrawlManager(RabbitManager):
         analysis_request.headers = crawl_result.headers
         analysis_request.crawl_time = crawl_result.crawl_time
         
-        self.send_message(analysis_request.to_dict(), "AnalysisRequest")
+        self.send_message(analysis_request.to_dict(), "AnalysisTask")
 
     def send_crawl_request(self, crawl_request, locked=False,
                            timeout: datetime.datetime=None):

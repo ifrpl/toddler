@@ -32,11 +32,11 @@ class SchedulerTest(TestCase):
 
         from toddler.scheduler import Scheduler
 
-        s = Scheduler(rabbit_url="ampq://localhost", exchange='CrawlRequest',
+        s = Scheduler(rabbitmq_url="amqp://localhost", exchange='CrawlRequest',
                       routing_key='CrawlRequest')
 
         try:
-            s.run()
+            s.schedule_jobs_for_hosts()
         except KeyboardInterrupt:
             pass
 
@@ -44,7 +44,7 @@ class SchedulerTest(TestCase):
 
         self.assertEqual(
             host.last_crawl_job_date.date(),
-            datetime.datetime.now().date()
+            datetime.datetime.utcnow().date()
         )
 
         self.assertTrue(send_message.called)

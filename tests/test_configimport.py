@@ -220,7 +220,9 @@ class TestConfigImport(TestCase):
 
     @mock.patch("builtins.open")
     def test_configimport_script(self, mock_open):
-
+        from toddler.decorators import _reset_already_run
+        from toddler import setup
+        _reset_already_run(setup)
         argv = ['--config', 'test.xml', "--type", "crawl", "--mongo-url",
                 "mongodb://localhost/test"]
 
