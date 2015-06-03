@@ -4,7 +4,7 @@ import os
 import ujson
 import yaml
 from addict import Dict
-
+from copy import copy
 configs = {}
 config = Dict()
 
@@ -48,7 +48,6 @@ def push_configuration_for_host(host, config, key=None):
     from mongoengine.errors import DoesNotExist
 
     host = Host.objects(host=host).first()
-
     if host is None:
         raise DoesNotExist
 
@@ -73,7 +72,7 @@ def push_configuration_for_host(host, config, key=None):
                         # we still have keys, so create a dict and move further
                         config[keys[0]] = {}
                         _set_config(config[keys[0]], keys[1:], value)
-            host_config = host.config
+            host_config = copy(host.config)
             _set_config(host_config, keys, config)
             host.config = host_config
             host.save()
