@@ -24,6 +24,8 @@ requirements = [
     "six==1.9.0",
     "ujson==1.33",
     "url==0.1.2",
+    "redis==2.10.3",
+    "pika_pool==0.1.1"
 ]
 
 setup(

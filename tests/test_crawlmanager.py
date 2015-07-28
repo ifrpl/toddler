@@ -10,12 +10,13 @@ mock_mongo_client = mongo_patcher.start()
 mock_mongo_client.return_value = Connection()
 
 from toddler.managers.crawlmanager import *
-from toddler.crawler import match_url_patterns
+from toddler.managers.crawlmanager import match_url_patterns
 from bs4 import BeautifulSoup, Tag
 import dateutil
 from datetime import datetime, timezone, timedelta
 import ujson
 from toddler.models import Host, RobotsTxt, CrawlDocument, hash_url
+from concurrent.futures import Future
 
 def get_timeout(json):
     """
@@ -25,6 +26,14 @@ def get_timeout(json):
     """
     return dateutil.parser.parse(ujson.loads(json)['timeout'])
 
+
+def declare_queue_side_effect(rabbitmq_url, queue_name):
+
+    ftr = Future()
+
+    ftr.set_result((queue_name, "{}_exchange".format(queue_name)))
+
+    return ftr
 
 class CrawlManagerTests(unittest.TestCase):
     
@@ -92,7 +101,8 @@ class CrawlManagerTests(unittest.TestCase):
                                           exchange="CrawlResult",
                                           routing_key="CrawlResult",
                                           exchange_type="",
-                                          log=mock.Mock())
+                                          log=mock.Mock(),
+                                          redis_url='localhost')
 
 
 
@@ -501,8 +511,9 @@ class CrawlManagerTests(unittest.TestCase):
         self.assertEqual(request['action'], "delete")
 
     @mock.patch("toddler.managers.crawlmanager.send_message_sync")
+    @mock.patch("toddler.managers.crawlmanager.declare_queue")
     @mock.patch("toddler.models.Host.objects")
-    def test_should_create_crawl_requests(self, objects, sync):
+    def test_should_create_crawl_requests(self, objects, declare_queue, sync):
 
         inst = objects.return_value
         inst.first.return_value = self.host
@@ -510,19 +521,14 @@ class CrawlManagerTests(unittest.TestCase):
         cm = self.crawl_manager
         cm._crawl_request_delay = 10
 
+        declare_queue.side_effect = declare_queue_side_effect
+
         cm.process_task(
             ujson.dumps(self.crawl_result.to_dict()).encode("utf8")
         )
         self.assertTrue(sync.called)
         # 1 analysis request and 3 crawl requests
         self.assertEqual(sync.call_count, 4)
-
-        first_call = sync.call_args_list[0][0]
-        second_call = sync.call_args_list[1][0]
-
-        t1 = get_timeout(first_call[1])
-        t2 = get_timeout(second_call[1])
-        self.assertTrue(t2-t1 == timedelta(seconds=10))
 
     @mock.patch("toddler.managers.crawlmanager.send_message_sync")
     @mock.patch("toddler.models.Host.objects")
@@ -552,8 +558,9 @@ class CrawlManagerTests(unittest.TestCase):
 
     @mock.patch("toddler.managers.crawlmanager.now")
     @mock.patch("toddler.managers.crawlmanager.send_message_sync")
+    @mock.patch("toddler.managers.crawlmanager.declare_queue")
     @mock.patch("toddler.models.Host.objects")
-    def test_send_crawl_request(self, objects, sync, mock_now):
+    def test_send_crawl_request(self, objects, declare_queue, sync, mock_now):
 
         request = Dict()
         request.url = "http://example.org/home.html"
@@ -569,48 +576,31 @@ class CrawlManagerTests(unittest.TestCase):
         test_now = datetime.now(timezone.utc)
         mock_now.return_value = test_now
 
-        self.crawl_manager.send_crawl_request(
-            request.to_dict()
-        )
 
-        msg, *rest = sync.call_args
-
-        self.assertEqual(ujson.loads(msg[1])['url'], request.url)
-
-        host.agressive_crawl = True
-        host.save()
-
-        self.crawl_manager.send_crawl_request(
-            request.to_dict()
-        )
-        msg, *rest = sync.call_args
-        self.assertEqual(
-            ujson.loads(msg[1])['timeout'],
-            test_now.isoformat()
-        )
-
-        host.agressive_crawl = False
-        # last crawl job date was 10 days ago
-        host.last_crawl_job_date = now()-timedelta(10)
+        declare_queue.side_effect = declare_queue_side_effect
 
         self.crawl_manager.send_crawl_request(
             request.to_dict()
         )
 
         msg, *rest = sync.call_args
-        self.assertEqual(
-            ujson.loads(msg[1])['timeout'],
-            test_now.isoformat()
-        )
+        doc = ujson.loads(msg[1])
+        self.assertEqual(doc['url'], request.url)
+        self.assertEqual(msg[3], 'CrawlRequestQueue_example.com_exchange')
+
 
     @mock.patch("toddler.models.CrawlDocument.objects")
     @mock.patch("toddler.managers.crawlmanager.send_message_sync")
+    @mock.patch("toddler.managers.crawlmanager.declare_queue")
     @mock.patch("toddler.models.Host.objects")
-    def test_status_codes_gt_200(self, objects, sync, cdobjects):
+    def test_status_codes_gt_200(self, objects, declare_queue, sync,
+                                 cdobjects):
 
 
         inst = objects.return_value
         inst.first.return_value = self.host
+
+        declare_queue.side_effect = declare_queue_side_effect
 
         crawl_response = {
             "url": "http://example.com/home.html",
@@ -651,32 +641,6 @@ class CrawlManagerTests(unittest.TestCase):
 
         self.assertEqual(sync.call_count, 2)
 
-        first_call = sync.call_args_list[0][0]
-        second_call = sync.call_args_list[0][0]
-
-
-        timeout1 = get_timeout(first_call[1])
-        self.assertEqual(timeout1.date()-now.date(),
-                               timedelta(1))
-        timeout2 = get_timeout(second_call[1])
-        self.assertEqual(timeout2.date()-now.date(), timedelta(1))
-
-
-    @mock.patch("toddler.models.Host.objects")
-    def test_host_block(self, objects):
-
-        host = self.host
-
-        host.block = True
-        inst = objects.return_value
-        inst.first.return_value = host
-
-        def _raises():
-
-            with HostLock(datetime.now(timezone.utc)) as lock:
-                pass
-
-        self.assertRaises(HostLocked, _raises)
 
     @mock.patch("toddler.models.Host.objects")
     @mock.patch("toddler.managers.crawlmanager.send_message_sync")

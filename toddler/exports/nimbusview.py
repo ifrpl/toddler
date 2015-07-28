@@ -20,8 +20,9 @@ def push_document(document: Document, push_api_url, connector="properties"):
 
     fn = lambda x: "PAPI_%s:%s" % (doc_id, x)
 
-    push = [(fn("uri"), document.url + "")]
-
+    push = [(fn("uri"), document.url + ""),
+            (fn("url"), document.url+""),
+            (fn("public_url"), document.url+"")]
 
     def _add_meta(name, val):
         meta_name = lambda x: fn("meta:%s") % x
@@ -34,6 +35,7 @@ def push_document(document: Document, push_api_url, connector="properties"):
     [_add_meta(key, val) for key, val in document.features.items()]
 
     push.append((fn("part_bytes:master"), ('', document.body, 'text/html')))
+    push.append((fn("part_directive:master:encoding"), ('', 'utf8')))
 
     response = requests.post(
         papi_url,

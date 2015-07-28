@@ -15,8 +15,8 @@ def json_task(func):
     :param func:
     :return:
     """
-    def wrapper(self, body):
-        return func(self, ujson.loads(body.decode("utf8")))
+    def wrapper(self, body, *args, **kwargs):
+        return func(self, ujson.loads(body.decode("utf8")), *args, **kwargs)
 
     return wrapper
 
@@ -47,14 +47,13 @@ class BaseManager(object):
         return self
 
 
-
 class RabbitManager(BaseManager):
     """Base for managers that connects to rabbit
 
     """
     def __init__(self, rabbitmq_url=None, queue=None, routing_key=None,
                  exchange="message", exchange_type="direct", log=None,
-                 max_tasks=3, logging=None):
+                 max_tasks=5, logging=None):
         """
 
         == Config dict structure (case adjusted to json configuration):
@@ -117,6 +116,10 @@ class RabbitManager(BaseManager):
             self._connection = self.connect()
             self._connection.ioloop.start()
 
+    @property
+    def queue(self):
+        return self._queue
+
     def on_connection_closed(self, connection, reply_code, reply_text):
         """
 
@@ -178,10 +181,10 @@ class RabbitManager(BaseManager):
         :return pika.SelectConnection:
         """
         self.log.info("Connecting to RabbitMQ")
-        return pika.SelectConnection(
-            pika.URLParameters(self._rabbitmq_url),
-            self.on_connection_open,
-            stop_ioloop_on_close=False
+        return pika.BlockingConnection(
+            pika.URLParameters(self._rabbitmq_url + "?heartbeat_interval=5"),
+            # self.on_connection_open,
+            # stop_ioloop_on_close=False
 
         )
     
@@ -249,6 +252,7 @@ class RabbitManager(BaseManager):
 
             def process_done(future: Future):
                 nonlocal self
+                self._tasks_number -= 1
                 if future.cancelled():
                     # process_task ended by cancel
                     self.requeue_message(self.requeue_message(
@@ -256,16 +260,19 @@ class RabbitManager(BaseManager):
                     )
                 else:
                     if future.exception():
-                        self.log.exception(future.exception())
+                        exception = future.exception()
+                        if not isinstance(exception, RequeueMessage):
+                            self.log.exception(exception)
                         
                         self.requeue_message(
                             basic_deliver.delivery_tag
                         )
                     else:
                         self.acknowledge_message(basic_deliver.delivery_tag)
-                self._tasks_number -= 1
-                
+
             ftr.add_done_callback(process_done)
+
+            return ftr
 
         except RuntimeError:
             self.requeue_message(basic_deliver.delivery_tag)
@@ -296,16 +303,28 @@ class RabbitManager(BaseManager):
 
         self._channel.add_on_cancel_callback(self.on_consumer_cancelled)
         self._consumer_tag = self._channel.basic_consume(self.on_message,
-                                                         self._queue)
+                                                         self.queue)
+
+        self.run()
 
     def run(self):
         """Run consumer"""
 
         self.log.info("Running consumer")
-        c = self.connect()
+        connection = self.connect()
         """:type: pika.SelectConnection"""
-        c.ioloop.start()
-            
+
+        channel = connection.channel()
+        self._channel = channel
+        self._connection = connection
+
+        for method_frame, properties, body in channel.consume(self.queue):
+            while self._tasks_number >= self._max_tasks:
+                time.sleep(0.1)
+
+            self.on_message(channel, method_frame, properties, body)
+
+
     def stop(self):
         """Stops consuming service
         :return:
@@ -315,8 +334,8 @@ class RabbitManager(BaseManager):
         self._closing = True
         self.stop_consuming()
         self._executor.shutdown(True)
-        if self._connection is not None:
-            self._connection.ioloop.start()
+        # if self._connection is not None:
+        #     self._connection.ioloop.start()
         self.log.info("Stopped")
 
     def __exit__(self, *args, **kwargs):

@@ -222,3 +222,22 @@ class TestAnalyser(TestCase):
                     # rabbit anymore
                     self.assertFalse(send_message.called)
 
+    def test_analysis_delayed(self):
+
+        with mock.patch("toddler.models.Host.objects") as objects:
+            inst = objects.return_value
+            host = self.host
+            host.config = {"crawlConfig": {}}
+            inst.first.return_value = host
+
+            with mock.patch("toddler.analyser.Analyser.send_message") \
+                    as send_message:
+                self.analyser.process_task(
+                    ujson.dumps(self.request).encode('utf8')
+                )
+                self.assertTrue(send_message.called)
+                self.assertEqual(
+                    self.request,
+                    ujson.loads(send_message.call_args[0][0])['message'])
+
+

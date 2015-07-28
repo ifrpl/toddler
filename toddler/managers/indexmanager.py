@@ -3,6 +3,8 @@ __author__ = 'michal'
 from . import RabbitManager, json_task
 from toddler.models import IndexDocument, connect, hash_url
 from . import crawlmanager
+import ujson
+import datetime
 
 
 class IndexManager(RabbitManager):
@@ -47,5 +49,3 @@ class IndexManager(RabbitManager):
             self.delete_document(msg)
         elif msg['action'] == "upsert" or msg['action'] == "insert":
             self.upsert_document(msg)
-
-

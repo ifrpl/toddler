@@ -160,10 +160,11 @@ def get_configuration(xml_string, log=None):
                 continue
             else:
                 if extracted_hostname is None and hostname is not None:
-                    rule['pattern'] = convert_regexp(rule['pattern'], hostname)
+                    rule['patterns'] = (convert_regexp(rule['pattern'],
+                                                      hostname), )
                 else:
                     hostname = extracted_hostname
-                    rule['pattern'] = convert_regexp(rule['pattern'])
+                    rule['patterns'] = (convert_regexp(rule['pattern']), )
 
             unordered_rules.append(rule)
 

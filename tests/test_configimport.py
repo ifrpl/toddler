@@ -193,19 +193,19 @@ class TestConfigImport(TestCase):
             ["noindex", "follow", "accept"]
         )
         self.assertEqual(
-            patterns[0]['pattern'],
+            patterns[0]['patterns'][0],
             "http://www\.lesiteimmo\.com/.*_ad\.html"
         )
         self.assertEqual(
-            patterns[1]['pattern'],
+            patterns[1]['patterns'][0],
             "http://www\.lesiteimmo\.com/.*"
         )
         self.assertEqual(
-            patterns[4]['pattern'],
+            patterns[4]['patterns'][0],
             "http://www\.lesiteimmo\.com/immobilier/.+/[0-9]{7}"
         )
         self.assertEqual(
-            patterns[5]['pattern'],
+            patterns[5]['patterns'][0],
             "http://www\.lesiteimmo\.com/.*alfa-romeo.*"
         )
 

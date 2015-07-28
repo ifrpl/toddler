@@ -1,16 +1,19 @@
 __author__ = 'michal'
 import datetime
-from mongoengine import connect as mongo_connect, Document, StringField, \
-    DateTimeField, IntField, DictField, BooleanField, EmbeddedDocument,\
-    EmbeddedDocumentField, URLField, DynamicDocument, signals
-
 import hashlib
+from functools import reduce
+from hashlib import md5
+
+from mongoengine import connect as mongo_connect
+from mongoengine import (BooleanField, DateTimeField, DictField, Document,
+                         DynamicDocument, EmbeddedDocument,
+                         EmbeddedDocumentField, IntField, StringField,
+                         URLField, signals)
+
+from .decorators import run_only_once
 
 __all__ = ['RobotsTxt', 'Host', 'connect', 'upsert_crawl_document', 'hash_url']
 
-from functools import reduce
-from hashlib import md5
-from .decorators import run_only_once
 
 
 @run_only_once(True)
@@ -76,7 +79,7 @@ class Host(Document):
 
 @handler(signals.pre_save)
 def add_url_hash(sender, document, **kwargs):
-    if document.url_hash == "":
+    if document.url_hash == "" or document.url_hash is None:
         document.url_hash = hash_url(document.url)
 
 
@@ -90,16 +93,15 @@ def update_last_modified(sender, document, **kwargs):
 class CrawlDocument(Document):
 
     host = StringField(required=True)
-    url = URLField(required=True, unique=True)
+    url = URLField(required=True)
     url_hash = StringField(default=None)
-    create_date = DateTimeField(default=datetime.datetime.now())
+    create_date = DateTimeField(default=datetime.datetime.utcnow())
     last_modified = DateTimeField()
     latest_request_date = DateTimeField()
     latest_result_date = DateTimeField()
     latest_request = DictField()
     latest_result = DictField()
     latest_status_code = IntField(default=0)
-
 
 def to_set_keywords(**kwargs):
 
@@ -114,8 +116,8 @@ def to_set_keywords(**kwargs):
 @update_last_modified.apply
 class IndexDocument(Document):
 
-    url = URLField(required=True, unique=True)
-    url_hash = StringField(default=None)
+    url = URLField(required=True)
+    url_hash = StringField(unique=True)
     host = StringField()
     meta_data = DictField()
     features = DictField()
@@ -142,14 +144,14 @@ def upsert_crawl_document(*args, **kwargs):
     :return:
     """
     url = kwargs['url']
-
+    url_hash = kwargs['url_hash']
     def _rewrite_keys(d, items):
         d["set__"+items[0]] = items[1]
         return d
 
     set_kw = reduce(_rewrite_keys, kwargs.items(), {})
 
-    return CrawlDocument.objects(url=url).update_one(
+    return CrawlDocument.objects(url_hash=url_hash).update_one(
         upsert=True,
         **set_kw
     )

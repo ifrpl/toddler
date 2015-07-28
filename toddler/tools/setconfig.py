@@ -5,6 +5,7 @@ import argparse
 from colorama import Fore
 from ..models import Host
 
+
 def main(*argv):
     """
     Config pusher for hosts
