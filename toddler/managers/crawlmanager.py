@@ -286,8 +286,6 @@ class CrawlManager(RabbitManager):
         if not has_robots_txt(host):
             return True
 
-
-
         user_agent = host.user_agent or self._user_agent
 
         return can_fetch_url(
@@ -338,6 +336,19 @@ class CrawlManager(RabbitManager):
 
         return declare_queue(self._rabbitmq_url, queue_name)
 
+    def send_crawl_request_to_host(self, crawl_request, host):
+
+        ftr = self.declare_queue(
+            "CrawlRequestQueue_{}".format(host))
+
+        def send_msg(future):
+            queue_name, exchange = future.result()
+            self.send_message(crawl_request, exchange)
+
+        ftr.add_done_callback(send_msg)
+
+        self.publisher.add_host(host.host)
+
     def send_crawl_request(self, crawl_request,
                            timeout: datetime.datetime=None):
 
@@ -358,16 +369,7 @@ class CrawlManager(RabbitManager):
             )
         )
 
-        ftr = self.declare_queue(
-            "CrawlRequestQueue_{}".format(host.host))
-
-        def send_msg(future):
-            queue_name, exchange = future.result()
-            self.send_message(crawl_request, exchange)
-
-        ftr.add_done_callback(send_msg)
-
-        self.publisher.add_host(host.host)
+        self.send_crawl_request_to_host(crawl_request, host.host)
 
     def extract_and_send_crawl_requests(self, crawl_result: Dict):
         """
@@ -451,7 +453,7 @@ class CrawlManager(RabbitManager):
                             or "nofollow" not in crawl_result.actions):
                         self.extract_and_send_crawl_requests(crawl_result)
                     if ('index' in crawl_result.actions
-                        or "noindex" not in crawl_result.actions):
+                            or "noindex" not in crawl_result.actions):
                         self.send_crawl_result_to_analysis(crawl_result)
 
                 elif 400 <= crawl_result.status_code <= 499:
@@ -476,7 +478,7 @@ class CrawlManager(RabbitManager):
             host.robots_txt = RobotsTxt(status="waiting")
             host.save()
 
-            self.send_message(robots_request, "CrawlRequest")
+            self.send_crawl_request_to_host(robots_request, host.host)
             self.log.warning("No robots for {}".format(host.host))
             raise RequeueMessage
         except RequeueMessage as e:
